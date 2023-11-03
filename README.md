@@ -1,5 +1,18 @@
 # Viam & Noetic
 
+## install
+
+Clone to local machine, install and configure viam, use viam-config.json as example to start.
+
+## TODO
+- update config to provide support for all messages
+- create as module 
+- add other sensors as needed
+- document
+- move to environment variables for module
+
+## messages
+
 This is a simple integration providing sensor support for:
 1. [can_msgs/Frame](http://docs.ros.org/en/noetic/api/can_msgs/html/msg/Frame.html)
 2. [sensor_msgs/BatteryState](http://docs.ros.org/en/noetic/api/sensor_msgs/html/msg/BatteryState.html)

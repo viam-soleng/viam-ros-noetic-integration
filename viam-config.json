@@ -1,0 +1,101 @@
+{
+  "modules": [
+    {
+      "type": "local",
+      "name": "ros-noetic",
+      "executable_path": "/home/viam/nuport/run.sh"
+    }
+  ],
+  "components": [
+    {
+      "attributes": {
+        "ros_msg_type": "CompressedImage",
+        "ros_topic": "/camera/image_raw/compressed",
+        "ros_msg_package": "sensor_msgs.msg"
+      },
+      "depends_on": [],
+      "name": "usb_camera",
+      "type": "sensor",
+      "model": "viam-soleng:noetic:sensor",
+      "service_configs": [
+        {
+          "type": "data_manager",
+          "attributes": {
+            "capture_methods": [
+              {
+                "method": "Readings",
+                "additional_params": {},
+                "capture_frequency_hz": 1
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "attributes": {
+        "ros_msg_type": "CameraInfo",
+        "ros_topic": "/camera/camera_info",
+        "ros_msg_package": "sensor_msgs.msg"
+      },
+      "depends_on": [],
+      "name": "usb_camera_info",
+      "type": "sensor",
+      "model": "viam-soleng:noetic:sensor",
+      "service_configs": [
+        {
+          "type": "data_manager",
+          "attributes": {
+            "capture_methods": [
+              {
+                "method": "Readings",
+                "additional_params": {},
+                "capture_frequency_hz": 1
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "attributes": {
+        "ros_msg_type": "ConfigDescription",
+        "ros_topic": "/camera/camera_stream/parameter_descriptions",
+        "ros_msg_package": "dynamic_reconfigure.msg"
+      },
+      "depends_on": [],
+      "name": "usb_camera_config_description",
+      "type": "sensor",
+      "model": "viam-soleng:noetic:sensor",
+      "service_configs": [
+        {
+          "type": "data_manager",
+          "attributes": {
+            "capture_methods": [
+              {
+                "method": "Readings",
+                "additional_params": {},
+                "capture_frequency_hz": 1
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "services": [
+    {
+      "name": "data",
+      "type": "data_manager",
+      "namespace": "rdk",
+      "attributes": {
+        "sync_interval_mins": 0.1,
+        "capture_dir": "",
+        "tags": [
+          "noetic"
+        ],
+        "additional_sync_paths": []
+      }
+    }
+  ]
+}
