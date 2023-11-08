@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+package viamsoleng.service.noetic_logger.v1;
+
+import "google/api/annotations.proto";
+
+service NoeticLoggerService {
+  rpc Status (LoggerRequest) returns (LoggerResponse) {
+    option (google.api.http) = {
+      post: "/viamsoleng/api/v1/service/noetic_logger/{name}/status"
+    };
+  }
+}
+
+message LoggerRequest {
+  string name = 1;
+}
+
+message LoggerResponse {
+  string ros_topic = 1;
+  string log_level = 2;
+}
