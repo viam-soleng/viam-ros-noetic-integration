@@ -9,6 +9,7 @@ from viam.module.types import Reconfigurable
 from viam.proto.app.robot import ServiceConfig
 from viam.resource.base import ResourceBase, ResourceName
 from viam.resource.types import Model, ModelFamily
+from viam.utils import ValueTypes
 from components.ros_sensor import RosSensor
 
 from .api import NoeticFilterService
@@ -98,7 +99,14 @@ class MyNoeticFilterService(NoeticFilterService, Reconfigurable):
         rospy.Subscriber(self.ros_topic, Log, self.subscriber_callback)
         self.lock = Lock()
 
-    async def status(self) -> dict:
+    async def status(self) -> Mapping[str, ValueTypes]:
         return {
             'event': self.event_name
+        }
+
+    async def should_filter(self, **kwargs) -> Mapping[str, ValueTypes]:
+
+        return {
+            'event': self.event_type,
+            'should_filter': self.event_trigger_obj.should_filter()
         }
