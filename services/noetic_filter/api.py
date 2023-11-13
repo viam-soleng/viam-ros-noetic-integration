@@ -21,9 +21,17 @@ class NoeticFilterService(ServiceBase):
 
 
 class NoeticFilterRPCService(NoeticFilterServiceBase, ResourceRPCServiceBase):
+    """
+
+    """
     RESOURCE_TYPE = NoeticFilterService
 
     async def Status(self, stream: Stream[StatusRequest, StatusResponse]) -> None:
+        """
+
+        :param stream:
+        :return:
+        """
         request = await stream.recv_message()
         assert request is not None
         name = request.name
@@ -32,6 +40,11 @@ class NoeticFilterRPCService(NoeticFilterServiceBase, ResourceRPCServiceBase):
         await stream.send_message(resp)
 
     async def ShouldFilter(self, stream: Stream[FilterRequest, FilterResponse]) -> None:
+        """
+
+        :param stream:
+        :return:
+        """
         request = await stream.recv_message()
         assert request is not None
         name = request.name
@@ -41,6 +54,9 @@ class NoeticFilterRPCService(NoeticFilterServiceBase, ResourceRPCServiceBase):
 
 
 class NoeticFilterClient(NoeticFilterService):
+    """
+
+    """
     def __init__(self, name: str, channel: Channel) -> None:
         self.channel = channel
         self.client = NoeticFilterServiceStub(channel)

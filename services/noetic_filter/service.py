@@ -1,9 +1,7 @@
 import importlib
 from threading import Lock
-from typing import ClassVar, Mapping, Sequence
+from typing import cast, ClassVar, Mapping, Sequence
 
-import rospy
-from rosgraph_msgs.msg import Log
 from typing_extensions import Self
 from viam.module.types import Reconfigurable
 from viam.proto.app.robot import ServiceConfig
@@ -15,6 +13,9 @@ from components.ros_sensor import RosSensor
 from .api import NoeticFilterService
 
 class MyNoeticFilterService(NoeticFilterService, Reconfigurable):
+    """
+
+    """
     MODEL: ClassVar[Model] = Model(ModelFamily('viam-soleng', 'noetic'), 'filter')
 
     event_sensor: RosSensor
@@ -30,12 +31,23 @@ class MyNoeticFilterService(NoeticFilterService, Reconfigurable):
     def new(
         cls, config: ServiceConfig, dependencies: Mapping[ResourceName, ResourceBase]
     ) -> Self:
+        """
+
+        :param config:
+        :param dependencies:
+        :return:
+        """
         service = cls(config.name)
         service.reconfigure(config, dependencies)
         return service
 
     @classmethod
     def validate_config(cls, config: ServiceConfig) -> Sequence[str]:
+        """
+
+        :param config:
+        :return:
+        """
         event_type = config.attributes.fields['event_type'].string_value
         event_trigger_type = config.attributes.fields['event_trigger_type'].string_value
         event_trigger_package = config.attributes.fields['event_trigger_package'].string_value
@@ -70,19 +82,21 @@ class MyNoeticFilterService(NoeticFilterService, Reconfigurable):
             # TODO: required support for other event types -> time, etc.
             raise Exception('event_trigger_type required to be set to "custom"')
 
-
-        cam_name = struct_to_dict(config.attributes).get("source")
-        actual_cam = dependencies[Camera.get_resource_name(cam_name)]
-        self.underlying = cast(Camera, actual_cam)
-
+        # TODO: validate on sensor
         return []
 
     def reconfigure(
         self, config: ServiceConfig, dependencies: Mapping[ResourceName, ResourceBase]
-    ):
+    ) -> None:
+        """
+
+        :param config:
+        :param dependencies:
+        :return:
+        """
         self.event_type = config.attributes.fields['event_type'].string_value
         self.event_trigger_type = config.attributes.fields['event_trigger_type'].string_value
-        self.event_sensor = config.attributes.fields['sensor'].string_value
+        event_sensor = config.attributes.fields['sensor'].string_value
         event_trigger_package = config.attributes.fields['event_trigger_package'].string_value
         event_trigger_cls = config.attributes.fields['event_trigger_cls'].string_value
 
@@ -96,16 +110,26 @@ class MyNoeticFilterService(NoeticFilterService, Reconfigurable):
         except AttributeError as ae:
             raise Exception(f'problem loading attribute: {ae}')
 
-        rospy.Subscriber(self.ros_topic, Log, self.subscriber_callback)
         self.lock = Lock()
 
+        # dependency setup
+        self.event_sensor = cast(RosSensor, dependencies[event_sensor])
+
     async def status(self) -> Mapping[str, ValueTypes]:
+        """
+
+        :return:
+        """
         return {
             'event': self.event_name
         }
 
     async def should_filter(self, **kwargs) -> Mapping[str, ValueTypes]:
+        """
 
+        :param kwargs:
+        :return:
+        """
         return {
             'event': self.event_type,
             'should_filter': self.event_trigger_obj.should_filter()
