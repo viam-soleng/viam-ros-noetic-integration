@@ -5,7 +5,7 @@ package viamsoleng.service.noetic_filter.v1;
 import "google/api/annotations.proto";
 
 service NoeticFilterService {
-  rpc status (StatusRequest) returns (StatusResponse) {
+  rpc Status (StatusRequest) returns (StatusResponse) {
     option (google.api.http) = {
       post: "/viamsoleng/api/v1/service/noetic_filter/{name}/status"
     };

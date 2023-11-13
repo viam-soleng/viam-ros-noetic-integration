@@ -2,3 +2,5 @@
 venv
 .venv
 .idea
+*_grpc.py
+*_pb2.py
