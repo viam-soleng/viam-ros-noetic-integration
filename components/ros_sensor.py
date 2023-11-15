@@ -59,6 +59,8 @@ class RosSensor(Sensor, Reconfigurable):
         timeout: Optional[float] = None,
         **kwargs
     ) -> Mapping[str, Any]:
+        if 'fromDataManagement' in extra and extra['fromDataManagement'] is True:
+            self.logger.info('process data manager call')
         with self.lock:
             msg = self.msg
 
