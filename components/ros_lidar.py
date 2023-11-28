@@ -79,8 +79,14 @@ class RosLidar(Camera, Reconfigurable):
 
 Registry.register_resource_creator(
     Camera.SUBTYPE,
+<<<<<<< HEAD
     RosCamera.MODEL,
     ResourceCreatorRegistration(RosLidar.new, RosLidar.reconfigure)
 )
 
 
+=======
+    RosLidar.MODEL,
+    ResourceCreatorRegistration(RosLidar.new, RosLidar.reconfigure)
+)
+>>>>>>> a3f2e89 (added lidar)

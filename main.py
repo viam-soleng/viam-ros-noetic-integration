@@ -9,6 +9,8 @@ from components import RosSensor
 from utils import RospyManager
 
 logger = getLogger(__name__)
+
+
 async def main(addr: str) -> None:
     try:
         logger.info('starting module')
