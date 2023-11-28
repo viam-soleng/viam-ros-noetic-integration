@@ -12,10 +12,7 @@ from viam.resource.base import ResourceBase
 from viam.resource.registry import Registry, ResourceCreatorRegistration
 from viam.resource.types import Model, ModelFamily
 from viam.utils import ValueTypes
-from rclpy.node import Node
-from rclpy.subscription import Subscription
 from sensor_msgs.msg import Imu
-from .viam_ros_node import ViamRosNode
 
 
 class RosImuProperties(MovementSensor.Properties):
