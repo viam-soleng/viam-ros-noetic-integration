@@ -1,6 +1,6 @@
 setup_venv:
 	git submodule update
-	python3 -m venv venv --system-site-packages
+	python3 -m venv venv --system-site-packages --system-site-packages
 	. ./venv/bin/activate; pip install -r ./requirements.txt; deactivate
 
 build_services: setup_venv
