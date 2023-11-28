@@ -1,4 +1,6 @@
-# Viam & Noetic
+# ROS Noetic Module
+
+Viam supports the ROS Noetic module using the rospy and viam python libraries.
 
 ## install
 
