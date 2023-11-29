@@ -116,5 +116,5 @@ class RosLidar(Camera, Reconfigurable):
 Registry.register_resource_creator(
     Camera.SUBTYPE,
     RosLidar.MODEL,
-    ResourceCreatorRegistration(RosLidar.new, RosLidar.reconfigure)
+    ResourceCreatorRegistration(RosLidar.new, RosLidar.validate_config)
 )

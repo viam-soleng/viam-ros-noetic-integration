@@ -15,6 +15,7 @@ for OVERLAY in "${OVERLAYS_ARRAY[@]}"; do
   source "${OVERLAY}"
 done
 
+
 if [[ ! -f ${SCRIPT_DIR}/venv/bin/python ]]; then
   echo "INFO: Attempting to setup python environment"
   python3 -m venv "${SCRIPT_DIR}"/venv --system-site-packages

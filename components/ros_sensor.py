@@ -22,7 +22,6 @@ from viam.resource.registry import Registry, ResourceCreatorRegistration
 class RosSensor(Sensor, Reconfigurable):
     MODEL: ClassVar[Model] = Model(ModelFamily('viam-soleng', 'noetic'), 'sensor')
     ros_topic: str
-    ros_msg_pkg: str
     ros_msg_type: str
     msg: Any
     lock: threading.Lock
@@ -41,13 +40,13 @@ class RosSensor(Sensor, Reconfigurable):
     def reconfigure(self, config: ComponentConfig, dependencies: Mapping[ResourceName, ResourceBase])-> None:
         self.logger = getLogger('RosSensor')
         self.ros_topic = config.attributes.fields['ros_topic'].string_value
-        self.ros_msg_package = config.attributes.fields['ros_msg_package'].string_value
+        ros_msg_pkg = config.attributes.fields['ros_msg_package'].string_value
         self.ros_msg_type = config.attributes.fields['ros_msg_type'].string_value
 
-        lib = importlib.import_module(self.ros_msg_package)
-        self.ros_sensor_cls = getattr(lib, self.ros_msg_type)
+        lib = importlib.import_module(ros_msg_pkg)
+        ros_sensor_cls = getattr(lib, self.ros_msg_type)
         self.lock = threading.Lock()
-        rospy.Subscriber(self.ros_topic, self.ros_sensor_cls, self.subscriber_callback)
+        rospy.Subscriber(self.ros_topic, ros_sensor_cls, self.subscriber_callback)
 
     def subscriber_callback(self, msg):
         self.msg = msg
