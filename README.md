@@ -83,3 +83,22 @@ it as json.
 ### convert json to ros
 
 TODO: will need to test binary conversion and validate for simulation
+
+### Module info
+```json
+{
+  "modules": [
+    {
+      "name": "ros-noetic",
+      "executable_path": "/home/viam/nuport/run.sh",
+      "type": "local",
+      "env": {
+        "ROS_MASTER": "http://localhost:11311",
+        "LD_PRELOAD": "/usr/lib/aarch64-linux-gnu/libgomp.so.1",
+        "ROS_ENV": "/opt/ros/noetic/setup.bash",
+        "OVERLAYS": ""
+      }
+    }
+  ]
+}
+```
