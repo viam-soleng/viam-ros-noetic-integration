@@ -31,7 +31,7 @@ class RosbagSensor(Sensor, Reconfigurable):
         return []
 
     def reconfigure(self, config: ComponentConfig, dependencies: Mapping[ResourceName, ResourceBase])-> None:
-        pass
+        return None
 
     async def get_readings(
         self,
@@ -46,30 +46,8 @@ class RosbagSensor(Sensor, Reconfigurable):
         return {'value': 'NOT READY'}
 
 
-def build_msg(msg):
-    r_data = {}
-    if hasattr(msg, '__slots__'):
-        for key in msg.__slots__:
-            r_data[key] = build_msg(getattr(msg, key))
-    else:
-        msg_type = type(msg)
-        if msg_type is list or msg_type is tuple or msg_type is set  or msg_type is array or msg_type is np.ndarray or msg_type is bytes:
-            l_data = []
-            for value in msg:
-                l_data.append(build_msg(value))
-            return l_data
-        elif msg_type is dict:
-            d_data = {}
-            for key in msg.keys():
-                d_data[key] = build_msg(msg[key])
-            return d_data
-        else:
-            return msg
-    return r_data
-
-
 Registry.register_resource_creator(
     Sensor.SUBTYPE,
-    RosSensor.MODEL,
-    ResourceCreatorRegistration(RosSensor.new, RosSensor.validate_config)
+    RosbagSensor.MODEL,
+    ResourceCreatorRegistration(RosbagSensor.new, RosbagSensor.validate_config)
 )
