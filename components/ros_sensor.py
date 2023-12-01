@@ -24,37 +24,92 @@ from .ros_timed_cache import RosTimedCache
 class RosSensor(Sensor, Reconfigurable):
     MODEL: ClassVar[Model] = Model(ModelFamily('viam-soleng', 'noetic'), 'sensor')
     ros_topic: str
+    ros_msg_pkg: str
     ros_msg_type: str
     msg_cache: RosTimedCache
     msg: Any
+    prev_msg: Any
+    filter_condition: str
     lock: threading.Lock
     logger: logging.Logger
 
     @classmethod
     def new(cls, config: ComponentConfig, dependencies: Mapping[ResourceName, ResourceBase]) -> Self:
+        """
+
+        :param config:
+        :param dependencies:
+        :return:
+        """
         sensor = cls(config.name)
+        sensor.logger = getLogger(config.name)
         sensor.reconfigure(config, dependencies)
         return sensor
 
     @classmethod
     def validate_config(cls, config: ComponentConfig) -> Sequence[str]:
+        """
+
+        :param config:
+        :return:
+        """
+        ros_topic = config.attributes.fields['ros_topic'].string_value
+        ros_msg_pkg = config.attributes.fields['ros_msg_package'].string_value
+        ros_msg_type = config.attributes.fields['ros_msg_type'].string_value
+
+        if ros_topic is None or ros_topic == '':
+            raise Exception('ros_topic is a required attribute')
+
+        if ros_msg_pkg is None or ros_msg_pkg == '':
+            raise Exception('ros_msg_pkg is a require attribute')
+
+        if ros_msg_type is None or ros_msg_type == '':
+            raise Exception('ros_msg_type is a required attribute')
         return []
 
     def reconfigure(self, config: ComponentConfig, dependencies: Mapping[ResourceName, ResourceBase])-> None:
-        self.logger = getLogger('RosSensor')
-        self.ros_topic = config.attributes.fields['ros_topic'].string_value
-        ros_msg_pkg = config.attributes.fields['ros_msg_package'].string_value
-        self.ros_msg_type = config.attributes.fields['ros_msg_type'].string_value
-        self.msg_cache = RosTimedCache()
+        """
+        reconfigure is called for all components when a configuration update occurs
+        we need to detect if the component has changed to decide on building a new cache
 
-        lib = importlib.import_module(ros_msg_pkg)
-        ros_sensor_cls = getattr(lib, self.ros_msg_type)
-        self.lock = threading.Lock()
-        rospy.Subscriber(self.ros_topic, ros_sensor_cls, self.subscriber_callback)
+        If the topic or data type changes we will clear the prior cache
+
+        :param config:
+        :param dependencies:
+        :return:
+        """
+        changed = False
+        ros_topic = config.attributes.fields['ros_topic'].string_value
+        ros_msg_pkg = config.attributes.fields['ros_msg_package'].string_value
+        ros_msg_type = config.attributes.fields['ros_msg_type'].string_value
+
+        if ros_topic != self.ros_topic or ros_msg_pkg != self.ros_msg_pkg or ros_msg_type != self.ros_msg_type:
+            changed = True
+
+        if changed:
+            self.logger.info('reconfigure: updating component')
+
+            # setup attributes
+            self.ros_topic = ros_topic
+            self.ros_msg_pkg = ros_msg_pkg
+            self.ros_msg_type = ros_msg_type
+
+            # get ros message type for callback
+            lib = importlib.import_module(self.ros_msg_pkg)
+            ros_sensor_cls = getattr(lib, self.ros_msg_type)
+
+            # create cache & lock
+            self.msg_cache = RosTimedCache()
+            self.lock = threading.Lock()
+
+            # setup subscriber
+            rospy.Subscriber(self.ros_topic, ros_sensor_cls, self.subscriber_callback)
 
     def subscriber_callback(self, msg):
         with self.lock:
+            self.prev_msg = self.msg
             self.msg = build_msg(msg)
+            # evaluate filter
             self.msg_cache.add_item(self.msg)
 
     async def get_readings(

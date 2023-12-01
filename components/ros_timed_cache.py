@@ -2,7 +2,7 @@ from datetime import datetime as dt, timedelta
 from logging import Logger
 from queue import Queue
 from threading import Lock, Thread, Timer
-from typing import Dict, Union
+from typing import Dict, List, Union
 from viam.logging import getLogger
 
 logger: Logger = getLogger(__name__)
@@ -29,6 +29,48 @@ class RosTimedCachedItem(object):
     def get_insert_time(self):
         return self._data_item['v_metadata']['inserted_into_cache_at']
 
+class RosFilterEvents:
+    """
+    static instance used by all caches
+
+    """
+    _events: List = []
+
+    @classmethod
+    def add_event(cls, event: str, start_time: dt) -> None:
+        for e in cls._events:
+            if e['name'] == event:
+                logger.info(f'{event} is already processing ({e["s_time"]}')
+                return
+
+        cls._events.append({
+            'name': event,
+            's_time': start_time,
+            'e_time': None
+        })
+
+    @classmethod
+    def remove_event(cls, event: str) -> None:
+        for e in cls._events:
+            if e['name'] == event:
+                cls._events.remove(e)
+    @classmethod
+    def stop_event(cls, event: str) -> None:
+        for e in cls._event:
+            if e['name'] == event:
+                e['e_time'] = dt.now()
+
+    @classmethod
+    def get_events(cls) -> List:
+        return list(cls._events)
+
+    @classmethod
+    def __len__(cls):
+        return len(cls._events)
+
+
+
+
 class RosTimedCache(object):
     """
 
@@ -41,7 +83,6 @@ class RosTimedCache(object):
         self._insert_times = []                         # insert times for items (might not be needed)
         self._start_time = None                         # start time of event
         self._finish_time = None                        # finish time of event
-        self._events = []                               # events current occurring
         self._in_event = False                          # are we in an event
         self._time_to_cache = seconds                   # how long to cache item for
 
@@ -64,9 +105,9 @@ class RosTimedCache(object):
             logger.warning('times not equal for cached item')
 
         data = None
-        if len(self._events) != 0:
+        if len(RosFilterEvents) != 0:
             data = cacheable_item.get_data()
-            data['v_metadata']['events'] = self._events
+            data['v_metadata']['events'] = RosFilterEvents.get_events()
             return data
         return data
 
