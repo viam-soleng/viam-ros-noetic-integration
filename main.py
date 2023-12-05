@@ -28,10 +28,10 @@ async def main(addr: str) -> None:
 
     try:
         m = Module(addr)
-        m.add_model_from_registry(Camera.SUBTYPE, RosCamera.MODEL)
-        m.add_model_from_registry(MovementSensor.SUBTYPE, RosImu.MODEL)
-        m.add_model_from_registry(Camera.SUBTYPE, RosLidar.MODEL)
-        m.add_model_from_registry(Sensor.SUBTYPE, RosSensor.MODEL)
+        #m.add_model_from_registry(Camera.SUBTYPE, RosCamera.MODEL)
+        #m.add_model_from_registry(MovementSensor.SUBTYPE, RosImu.MODEL)
+        #m.add_model_from_registry(Camera.SUBTYPE, RosLidar.MODEL)
+        #m.add_model_from_registry(Sensor.SUBTYPE, RosSensor.MODEL)
         await m.start()
     except Exception as e:
         logger.fatal(f'error occurred starting module: {e}, exiting ({MODULE_START_ERR})')

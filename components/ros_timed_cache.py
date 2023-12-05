@@ -1,4 +1,5 @@
 from datetime import datetime as dt, timedelta
+from google.protobuf.timestamp_pb2 import Timestamp
 from logging import Logger
 from queue import Queue
 from threading import Lock, Thread, Timer
@@ -20,7 +21,7 @@ class RosTimedCachedItem(object):
         logger.debug('inserting data')
         self._data_item = to_cache
         self._data_item['v_metadata'] = {
-            'inserted_into_cache_at': dt.now()
+            'inserted_into_cache_at': dt.now().timestamp()
         }
 
     def get_data(self):

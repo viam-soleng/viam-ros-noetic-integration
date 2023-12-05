@@ -1,3 +1,6 @@
+"""
+
+"""
 import importlib
 import logging
 
@@ -6,7 +9,7 @@ import rospy
 import threading
 
 from array import array
-from typing import Any, ClassVar, Mapping, Optional, Sequence
+from typing import Any, ClassVar, List, Mapping, Optional, Sequence
 from typing_extensions import Self
 
 from viam.components.sensor import Sensor
@@ -26,6 +29,10 @@ class RosSensor(Sensor, Reconfigurable):
     ros_topic: str
     ros_msg_pkg: str
     ros_msg_type: str
+    dm_present: bool
+    use_cache: bool
+    cache_window: int
+    events: List
     msg_cache: RosTimedCache
     msg: Any
     prev_msg: Any
@@ -43,6 +50,13 @@ class RosSensor(Sensor, Reconfigurable):
         """
         sensor = cls(config.name)
         sensor.logger = getLogger(config.name)
+        sensor.ros_topic = None
+        sensor.ros_msg_pkg = None
+        sensor.ros_msg_type = None
+        sensor.msg = None
+        sensor.prev_msg = None
+        sensor.dm_present = False
+        sensor.use_cache = False
         sensor.reconfigure(config, dependencies)
         return sensor
 
@@ -78,18 +92,32 @@ class RosSensor(Sensor, Reconfigurable):
         :param dependencies:
         :return:
         """
-        changed = False
+
         ros_topic = config.attributes.fields['ros_topic'].string_value
         ros_msg_pkg = config.attributes.fields['ros_msg_package'].string_value
         ros_msg_type = config.attributes.fields['ros_msg_type'].string_value
 
-        if ros_topic != self.ros_topic or ros_msg_pkg != self.ros_msg_pkg or ros_msg_type != self.ros_msg_type:
-            changed = True
+        # TODO: events can change without reconfigure?
+        self.events = config.attributes.fields['events'].list_value
 
-        if changed:
-            self.logger.info('reconfigure: updating component')
+        dm_present = False
+        for sc in config.service_configs:
+            if sc.type == 'rdk:service:data_manager':
+                dm_present = True
 
-            # setup attributes
+        cache_window = config.attributes.fields['cache_window'].number_value
+
+        # if any of these three items are changed this sensor needs to be modified
+        if (
+            ros_topic != self.ros_topic or              # message topic was changed
+            ros_msg_pkg != self.ros_msg_pkg or          # message package was changed
+            ros_msg_type != self.ros_msg_type or        # message type was changed
+            dm_present != self.dm_present               # data manager was added or removed
+
+        ):
+            self.logger.info(f'reconfigure of {config.name} is required')
+
+            # setup ros attributes
             self.ros_topic = ros_topic
             self.ros_msg_pkg = ros_msg_pkg
             self.ros_msg_type = ros_msg_type
@@ -98,19 +126,41 @@ class RosSensor(Sensor, Reconfigurable):
             lib = importlib.import_module(self.ros_msg_pkg)
             ros_sensor_cls = getattr(lib, self.ros_msg_type)
 
+            # event data type
+            # { ...
+            #     events: [ {event_name: '..', event_threshold: '', event_key: '..'}, ...],
+            #     cache_window: Xseconds,
+            #
+            if self.events is not None and len(self.events) > 0:
+                self.logger.info('processing events configuration')
+            else:
+                self.logger.warning('no events list to process')
             # create cache & lock
-            self.msg_cache = RosTimedCache()
+            if cache_window is None or cache_window == 0:
+                self.logger.warning('cache_window must be a configured for 1 second or more, will not be configure')
+                self.use_cache = False
+            else:
+                self.msg_cache = RosTimedCache()
+                self.use_cache = True
+
             self.lock = threading.Lock()
 
             # setup subscriber
             rospy.Subscriber(self.ros_topic, ros_sensor_cls, self.subscriber_callback)
 
     def subscriber_callback(self, msg):
+        """
+
+        :param msg:
+        :return:
+        """
         with self.lock:
             self.prev_msg = self.msg
             self.msg = build_msg(msg)
             # evaluate filter
-            self.msg_cache.add_item(self.msg)
+            # cache?
+            if self.use_cache:
+                self.msg_cache.add_item(self.msg)
 
     async def get_readings(
         self,
@@ -119,9 +169,18 @@ class RosSensor(Sensor, Reconfigurable):
         timeout: Optional[float] = None,
         **kwargs
     ) -> Mapping[str, Any]:
+        """
+
+        :param extra:
+        :param timeout:
+        :param kwargs:
+        :return:
+        """
         if 'fromDataManagement' in extra and extra['fromDataManagement'] is True:
-            self.logger.info('process data manager call')
-            return self.msg_cache.get_item()
+            if self.use_cache:
+                return self.msg_cache.get_item()
+            else:
+                return self.msg
 
         if self.msg is not None:
             return self.msg
@@ -129,6 +188,11 @@ class RosSensor(Sensor, Reconfigurable):
 
 
 def build_msg(msg):
+    """
+
+    :param msg:
+    :return:
+    """
     r_data = {}
     if hasattr(msg, '__slots__'):
         for key in msg.__slots__:
