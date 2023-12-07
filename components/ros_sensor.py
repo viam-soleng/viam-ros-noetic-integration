@@ -50,17 +50,7 @@ class RosSensor(Sensor, Reconfigurable):
         :return:
         """
         sensor = cls(config.name)
-        sensor.logger = getLogger(config.name)              # logger only needs to be setup once
-        sensor.lock = threading.Lock()                      # lock only needs to be setup once
-
-        # set all default values (these will be the initial values to compare to new config, etc.)
-        sensor.ros_topic = None
-        sensor.ros_msg_pkg = None
-        sensor.ros_msg_type = None
-        sensor.msg = None
-        sensor.prev_msg = None
-        sensor.dm_present = False
-        sensor.use_cache = False
+        #sensor.logger = getLogger(config.name)  # logger only needs to be setup once
         sensor.reconfigure(config, dependencies)
         return sensor
 
@@ -84,6 +74,21 @@ class RosSensor(Sensor, Reconfigurable):
         if ros_msg_type is None or ros_msg_type == '':
             raise Exception('ros_msg_type is a required attribute')
         return []
+
+    def __init__(self, name: str) -> None:
+        super().__init__(name)
+        self.logger = getLogger(name)  # logger only needs to be setup once
+        self.lock = threading.Lock()  # lock only needs to be setup once
+        self.logger.info(f'__init__ -> called: {name}')
+
+        # set all default values (these will be the initial values to compare to new config, etc.)
+        self.ros_topic = None
+        self.ros_msg_pkg = None
+        self.ros_msg_type = None
+        self.msg = None
+        self.prev_msg = None
+        self.dm_present = False
+        self.use_cache = False
 
     def reconfigure(self, config: ComponentConfig, dependencies: Mapping[ResourceName, ResourceBase])-> None:
         """
@@ -138,8 +143,10 @@ class RosSensor(Sensor, Reconfigurable):
             # should we set up cache?
             if dm_present:
                 # data management is present and collecting we need to use cache
+                self.logger.info('setting up cache')
             else:
                 # no cache - if it was alive before now it is not
+                self.logger.info('no cache needed')
 
             # event data type
             # { ...
