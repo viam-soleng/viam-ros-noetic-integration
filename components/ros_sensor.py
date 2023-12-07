@@ -37,15 +37,18 @@ class RosSensor(Sensor, Reconfigurable):
     def validate_config(cls, config: ComponentConfig) -> Sequence[str]:
         return []
 
-    def reconfigure(self, config: ComponentConfig, dependencies: Mapping[ResourceName, ResourceBase])-> None:
+    def __init__(self) -> None:
         self.logger = getLogger('RosSensor')
+        self.lock = threading.Lock()
+        self.msg = None
+
+    def reconfigure(self, config: ComponentConfig, dependencies: Mapping[ResourceName, ResourceBase])-> None:
         self.ros_topic = config.attributes.fields['ros_topic'].string_value
         ros_msg_pkg = config.attributes.fields['ros_msg_package'].string_value
         self.ros_msg_type = config.attributes.fields['ros_msg_type'].string_value
 
         lib = importlib.import_module(ros_msg_pkg)
         ros_sensor_cls = getattr(lib, self.ros_msg_type)
-        self.lock = threading.Lock()
         rospy.Subscriber(self.ros_topic, ros_sensor_cls, self.subscriber_callback)
 
     def subscriber_callback(self, msg):
@@ -59,7 +62,7 @@ class RosSensor(Sensor, Reconfigurable):
         **kwargs
     ) -> Mapping[str, Any]:
         if 'fromDataManagement' in extra and extra['fromDataManagement'] is True:
-            self.logger.info('process data manager call')
+            self.logger.debug('process data manager call')
         with self.lock:
             msg = self.msg
 

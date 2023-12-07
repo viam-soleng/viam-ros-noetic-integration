@@ -50,6 +50,10 @@ class RosLidar(Camera, Reconfigurable):
             raise Exception('ros_topic required')
         return []
 
+    def __init__(self) -> None:
+        self.lock = Lock()
+        self.msg = None
+
     def reconfigure(self, config: ComponentConfig, dependencies: Mapping[ResourceName, ResourceBase]) -> None:
         self.ros_topic = config.attributes.fields['ros_topic'].string_value
         self.ros_lidar_props = Camera.Properties(
@@ -60,7 +64,6 @@ class RosLidar(Camera, Reconfigurable):
             distortion_parameters=DistortionParameters(model='')
         )
         rospy.Subscriber(self.ros_topic, LaserScan, self.subscriber_callback)
-        self.lock = Lock()
 
     def subscriber_callback(self, msg: LaserScan) -> None:
         self.msg = msg
