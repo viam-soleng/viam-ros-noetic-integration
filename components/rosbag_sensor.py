@@ -1,8 +1,12 @@
+"""
+the rosbag sensor will be used to copy data from a rosbag location to another file location
+"""
 import numpy as np
 
 from array import array
 from datetime import datetime as dt
-from typing import Any, ClassVar, Mapping, Optional, Sequence
+from logging import Logger
+from typing import Any, ClassVar, Mapping, Optional, Sequence, Union
 from typing_extensions import Self
 
 from viam.components.sensor import Sensor
@@ -16,8 +20,9 @@ from viam.resource.registry import Registry, ResourceCreatorRegistration
 
 class RosbagSensor(Sensor, Reconfigurable):
     MODEL: ClassVar[Model] = Model(ModelFamily('viam-soleng', 'noetic'), 'rosbag-sensor')
-    event_start_time: dt
-    event_end_time: dt
+    logger: Logger
+    event_start_time: Union[dt, None]
+    event_end_time: Union[dt, None]
     rosbag_directory: str
 
     @classmethod
@@ -29,6 +34,12 @@ class RosbagSensor(Sensor, Reconfigurable):
     @classmethod
     def validate_config(cls, config: ComponentConfig) -> Sequence[str]:
         return []
+
+    def __init__(self, name: str) -> None:
+        super().__init__(name)
+        self.event_end_time = None
+        self.event_start_time = None
+        self.rosbag_directory = ''
 
     def reconfigure(self, config: ComponentConfig, dependencies: Mapping[ResourceName, ResourceBase])-> None:
         return None

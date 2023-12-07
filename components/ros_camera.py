@@ -1,5 +1,5 @@
 """
-TODO: understand the Camera properties
+TODO: do we need to support updates to camera properties
 """
 from PIL import Image
 import cv2

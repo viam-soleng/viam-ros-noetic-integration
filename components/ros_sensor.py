@@ -77,9 +77,9 @@ class RosSensor(Sensor, Reconfigurable):
 
     def __init__(self, name: str) -> None:
         super().__init__(name)
-        self.logger = getLogger(name)  # logger only needs to be setup once
-        self.lock = threading.Lock()  # lock only needs to be setup once
-        self.logger.info(f'__init__ -> called: {name}')
+        self.logger = getLogger(self.__class__.__name__)    # logger only needs to be setup once
+        self.lock = threading.Lock()                        # lock only needs to be setup once
+        self.logger.info(f'constructing object: {name}')
 
         # set all default values (these will be the initial values to compare to new config, etc.)
         self.ros_topic = None
@@ -144,9 +144,14 @@ class RosSensor(Sensor, Reconfigurable):
             if dm_present:
                 # data management is present and collecting we need to use cache
                 self.logger.info('setting up cache')
+                # validate events
+
+                # validate cache window
+
+                # now enable cache
             else:
                 # no cache - if it was alive before now it is not
-                self.logger.info('no cache needed')
+                self.logger.info('no cache needed, disabling anything that was previously created')
 
             # event data type
             # { ...

@@ -1,7 +1,7 @@
 from datetime import datetime as dt, timedelta
 from google.protobuf.timestamp_pb2 import Timestamp
 from logging import Logger
-from queue import Queue
+from queue import Empty, Queue
 from threading import Lock, Thread, Timer
 from typing import Dict, List, Union
 from viam.logging import getLogger
@@ -98,6 +98,10 @@ class RosTimedCache(object):
         self._queue.put(cacheable_item)
 
     def get_item(self) -> Union[Dict, None]:
+
+        if self._queue.empty():
+            return None
+
         insert_time = self._insert_times[-1]
         cacheable_item = self._queue.get()
 
@@ -120,5 +124,6 @@ class RosTimedCache(object):
         """
         pass
 
-    def clean_cache(self):
-        pass
+    def empty_cache(self):
+        with self._queue.mutex:
+            self._queue.get_nowait()
