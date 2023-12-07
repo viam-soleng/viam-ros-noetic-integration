@@ -14,7 +14,7 @@
 
 ## Sensors
 
-### configuration
+### configuration   
 
 ```json
 { 

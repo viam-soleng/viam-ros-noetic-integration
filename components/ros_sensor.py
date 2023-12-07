@@ -12,6 +12,7 @@ from array import array
 from typing import Any, ClassVar, List, Mapping, Optional, Sequence
 from typing_extensions import Self
 
+from google.protobuf.json_format import MessageToDict
 from viam.components.sensor import Sensor
 from viam.logging import getLogger
 from viam.module.types import Reconfigurable
@@ -99,8 +100,8 @@ class RosSensor(Sensor, Reconfigurable):
 
         # TODO: events can change without reconfigure?
         self.events = config.attributes.fields['events'].list_value
-
         dm_present = False
+
         for sc in config.service_configs:
             if sc.type == 'rdk:service:data_manager':
                 dm_present = True
