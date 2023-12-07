@@ -50,7 +50,10 @@ class RosSensor(Sensor, Reconfigurable):
         :return:
         """
         sensor = cls(config.name)
-        sensor.logger = getLogger(config.name)
+        sensor.logger = getLogger(config.name)              # logger only needs to be setup once
+        sensor.lock = threading.Lock()                      # lock only needs to be setup once
+
+        # set all default values (these will be the initial values to compare to new config, etc.)
         sensor.ros_topic = None
         sensor.ros_msg_pkg = None
         sensor.ros_msg_type = None
@@ -98,11 +101,15 @@ class RosSensor(Sensor, Reconfigurable):
         ros_msg_pkg = config.attributes.fields['ros_msg_package'].string_value
         ros_msg_type = config.attributes.fields['ros_msg_type'].string_value
 
-        # TODO: events can change without reconfigure?
-        self.events = config.attributes.fields['events'].list_value
         dm_present = False
 
         for sc in config.service_configs:
+            # TODO: RDK/SDK bug that does not pass attributes of service config
+            #
+            # work-around: if the data_manager service is present we will assume the
+            #              readings method for the sensor is turned on
+            #              this will be documented and shared, once this bug is
+            #              addressed we will update the code
             if sc.type == 'rdk:service:data_manager':
                 dm_present = True
 
@@ -116,26 +123,37 @@ class RosSensor(Sensor, Reconfigurable):
             dm_present != self.dm_present               # data manager was added or removed
 
         ):
-            self.logger.info(f'reconfigure of {config.name} is required')
+            self.logger.info(f'reconfigure of {config.name} is required, cache will be reset')
 
-            # setup ros attributes
+            # setup ros attributes (that might have changed)
             self.ros_topic = ros_topic
             self.ros_msg_pkg = ros_msg_pkg
             self.ros_msg_type = ros_msg_type
+            self.dm_present = dm_present
 
             # get ros message type for callback
             lib = importlib.import_module(self.ros_msg_pkg)
             ros_sensor_cls = getattr(lib, self.ros_msg_type)
+
+            # should we set up cache?
+            if dm_present:
+                # data management is present and collecting we need to use cache
+            else:
+                # no cache - if it was alive before now it is not
 
             # event data type
             # { ...
             #     events: [ {event_name: '..', event_threshold: '', event_key: '..'}, ...],
             #     cache_window: Xseconds,
             #
+            self.events = config.attributes.fields['events'].list_value
             if self.events is not None and len(self.events) > 0:
+                # TODO: review with team to validate this configuration
                 self.logger.info('processing events configuration')
             else:
-                self.logger.warning('no events list to process')
+                self.logger.warning('no events list to process, disabling cache if it already exists')
+                self.use_cache = False
+
             # create cache & lock
             if cache_window is None or cache_window == 0:
                 self.logger.warning('cache_window must be a configured for 1 second or more, will not be configure')
@@ -144,7 +162,9 @@ class RosSensor(Sensor, Reconfigurable):
                 self.msg_cache = RosTimedCache()
                 self.use_cache = True
 
-            self.lock = threading.Lock()
+            # finally if we should not use cache
+            #if not self.use_cache:
+
 
             # setup subscriber
             rospy.Subscriber(self.ros_topic, ros_sensor_cls, self.subscriber_callback)
