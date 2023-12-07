@@ -43,12 +43,14 @@ class RosCamera(Camera, Reconfigurable):
             raise Exception('ros_topic required')
         return []
 
-    def __init__(self) -> None:
+    def __init__(self, name: str) -> None:
+        super().__init__(name)
         self.image = None
         self.bridge = CvBridge()
         self.lock = Lock()
 
     def reconfigure(self, config: ComponentConfig, dependencies: Mapping[ResourceName, ResourceBase]) -> None:
+        # todo: need to account for distortion parameters?
         self.props = Camera.Properties(
             supports_pcd=False,
             distortion_parameters=DistortionParameters(),

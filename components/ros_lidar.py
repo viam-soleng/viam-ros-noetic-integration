@@ -50,7 +50,8 @@ class RosLidar(Camera, Reconfigurable):
             raise Exception('ros_topic required')
         return []
 
-    def __init__(self) -> None:
+    def __init__(self, name: str) -> None:
+        super().__init__(name)
         self.lock = Lock()
         self.msg = None
 

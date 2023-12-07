@@ -37,7 +37,8 @@ class RosSensor(Sensor, Reconfigurable):
     def validate_config(cls, config: ComponentConfig) -> Sequence[str]:
         return []
 
-    def __init__(self) -> None:
+    def __init__(self, name: str) -> None:
+        super().__init__(name)
         self.logger = getLogger('RosSensor')
         self.lock = threading.Lock()
         self.msg = None

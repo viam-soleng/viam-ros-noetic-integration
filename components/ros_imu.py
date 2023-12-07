@@ -47,7 +47,8 @@ class RosImu(MovementSensor, Reconfigurable):
             raise Exception('ros_topic required')
         return []
 
-    def __init__(self) -> None:
+    def __init__(self, name: str) -> None:
+        super().__init__(name)
         self.msg = None
         self.props = RosImuProperties()
         self.lock = Lock()
