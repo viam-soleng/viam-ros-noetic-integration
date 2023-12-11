@@ -12,8 +12,8 @@ from array import array
 from typing import Any, ClassVar, List, Mapping, Optional, Sequence
 from typing_extensions import Self
 
-from google.protobuf.json_format import MessageToDict
 from viam.components.sensor import Sensor
+from viam.errors import NoCaptureToStoreError
 from viam.logging import getLogger
 from viam.module.types import Reconfigurable
 from viam.resource.types import Model, ModelFamily
@@ -50,7 +50,6 @@ class RosSensor(Sensor, Reconfigurable):
         :return:
         """
         sensor = cls(config.name)
-        #sensor.logger = getLogger(config.name)  # logger only needs to be setup once
         sensor.reconfigure(config, dependencies)
         return sensor
 
@@ -105,6 +104,8 @@ class RosSensor(Sensor, Reconfigurable):
         ros_topic = config.attributes.fields['ros_topic'].string_value
         ros_msg_pkg = config.attributes.fields['ros_msg_package'].string_value
         ros_msg_type = config.attributes.fields['ros_msg_type'].string_value
+        cache_window = config.attributes.fields['cache_window'].number_value
+        events = config.attributes.fields['events_info'].list_value
 
         dm_present = False
 
@@ -117,8 +118,6 @@ class RosSensor(Sensor, Reconfigurable):
             #              addressed we will update the code
             if sc.type == 'rdk:service:data_manager':
                 dm_present = True
-
-        cache_window = config.attributes.fields['cache_window'].number_value
 
         # if any of these three items are changed this sensor needs to be modified
         if (
@@ -145,38 +144,27 @@ class RosSensor(Sensor, Reconfigurable):
                 # data management is present and collecting we need to use cache
                 self.logger.info('setting up cache')
                 # validate events
+                if events is None or len(events) == 0:
+                    raise Exception('cannot configure a cache without setting up at least one event trigger')
 
                 # validate cache window
+                if cache_window is None or cache_window == 0:
+                    raise Excpetion('cache_window mus be a valid integer greater than 0, if we are using caches')
 
                 # now enable cache
+                self.cache_window = cache_window
+                self.events = events
+                self.use_cache = True
+                if self.msg_cache is None:
+                    self.logger.info('creating cache')
+                    self.msg_cache = RosTimedCache(seconds=self.cache_window)
+                else:
+                    self.logger.info('updating cache')
+                    # change cache window if different from current cache window
+
             else:
                 # no cache - if it was alive before now it is not
                 self.logger.info('no cache needed, disabling anything that was previously created')
-
-            # event data type
-            # { ...
-            #     events: [ {event_name: '..', event_threshold: '', event_key: '..'}, ...],
-            #     cache_window: Xseconds,
-            #
-            self.events = config.attributes.fields['events'].list_value
-            if self.events is not None and len(self.events) > 0:
-                # TODO: review with team to validate this configuration
-                self.logger.info('processing events configuration')
-            else:
-                self.logger.warning('no events list to process, disabling cache if it already exists')
-                self.use_cache = False
-
-            # create cache & lock
-            if cache_window is None or cache_window == 0:
-                self.logger.warning('cache_window must be a configured for 1 second or more, will not be configure')
-                self.use_cache = False
-            else:
-                self.msg_cache = RosTimedCache()
-                self.use_cache = True
-
-            # finally if we should not use cache
-            #if not self.use_cache:
-
 
             # setup subscriber
             rospy.Subscriber(self.ros_topic, ros_sensor_cls, self.subscriber_callback)
@@ -211,10 +199,10 @@ class RosSensor(Sensor, Reconfigurable):
         """
         if 'fromDataManagement' in extra and extra['fromDataManagement'] is True:
             if self.use_cache:
-                return self.msg_cache.get_item()
-            else:
-                return self.msg
-
+                data = self.msg_cache.get_item()
+                if data is not None:
+                    return data
+            raise NoCaptureToStoreError()
         if self.msg is not None:
             return self.msg
         return {'value': 'NOT READY'}
