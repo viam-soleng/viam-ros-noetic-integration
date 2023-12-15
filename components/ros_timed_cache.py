@@ -1,9 +1,8 @@
 from datetime import datetime as dt, timedelta
-from google.protobuf.timestamp_pb2 import Timestamp
 from logging import Logger
 from queue import Empty, Queue
 from threading import Lock, Thread, Timer
-from typing import Dict, List, Union
+from typing import Any, Dict, List, Union
 from typing_extensions import Self
 from viam.logging import getLogger
 
@@ -19,7 +18,7 @@ class RosTimedCachedItem(object):
 
         :param to_cache:
         """
-        logger.debug('inserting data')
+        logger.debug('creating cache data')
         self._data_item = to_cache
         self._data_item['v_metadata'] = {
             'inserted_into_cache_at': dt.now().timestamp()
@@ -35,8 +34,11 @@ class RosFilterEvents:
     """
     static event table used by all caches to determine current events and timings
 
+    Need to clean this up as this is not a true singleton pattern since __init__ can be
+    called as well
+
     """
-    _rfe_obj: RosFilterEvents = None
+    _rfe_obj: Any = None
     _events: List
     _current_start_time: Union[dt, None]
     _current_end_time: Union[dt, None]
@@ -50,7 +52,8 @@ class RosFilterEvents:
         if cls._rfe_obj is not None:
             return cls._rfe_obj
         else:
-            return cls()
+            cls._rfe_obj = cls()
+            return cls._rfe_obj
 
     def __init__(self) -> None:
         """
@@ -61,6 +64,13 @@ class RosFilterEvents:
         self._current_end_time = None
 
     def add_event(self, event: str, start_time: dt) -> None:
+        """
+        add event to list
+
+        :param event:
+        :param start_time:
+        :return:
+        """
         for e in self._events:
             if e['name'] == event:
                 logger.info(f'{event} is already processing ({e["s_time"]}')
@@ -96,6 +106,9 @@ class RosFilterEvents:
     def get_events(self) -> List:
         return list(self._events)
 
+    def clear_events(self) -> None:
+        pass
+
     def __len__(self):
         return len(self._events)
 
@@ -103,7 +116,7 @@ class RosFilterEvents:
 
 class RosTimedCache(object):
     """
-
+    This cache will be created for each sensor that is being collected
     """
     def __init__(self, seconds : int =20) -> None :
         """
