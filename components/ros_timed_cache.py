@@ -5,8 +5,27 @@ from threading import Lock, Thread, Timer
 from typing import Any, Dict, List, Union
 from typing_extensions import Self
 from viam.logging import getLogger
+from diskcache import Cache, Deque
 
 logger: Logger = getLogger(__name__)
+
+
+class RosGlobalEventTable(object):
+    """
+
+    """
+    def __new__(cls):
+        if not hasattr(cls, 'instance'):
+            cls.instance = super(RosGlobalEventTable, cls).__new__(cls)
+        return cls.instance
+
+    def get_start_time(self):
+        return self._start_time
+
+    def get_end_time(self):
+        return self._end_time
+
+
 
 class RosTimedCachedItem(object):
     """
