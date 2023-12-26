@@ -2,6 +2,21 @@
 module: Global Event Table
 
 The global event table is responsible for storing all active events in a persistent cache
+
+Every event will be stored in the table using:
+
+[key:event_name] -> {
+ name: 'event_name',
+ start: start_time - cache_window
+ end: stop_time + cache_window
+}
+
+The start time must be set before the event is added to the cache table, and the stop time
+must exist when stop_event is called
+
+Though diskcache gives the feels like a python dictionary, we cannot update the disk-backed
+dictionaries using d[event_name][k] = v
+We will retrieve the event, update it in memory and set the new event
 """
 import os
 from datetime import datetime as dt, timedelta
@@ -81,13 +96,19 @@ def stop_event(event: Dict) -> None:
     """
     global __end_time
     __lock.acquire()
-    if event in __cache:
+    if event['name'] in __cache:
+        name = event['name']
+        # get existing event
+        existing_event = __cache[name]
+        existing_event['end'] = event['end']
+
+        # do we update event
         if __end_time is None or event['end'] > __end_time:
             __logger.debug(f'{event["name"]} stopped later than last event, updating time')
             __end_time = event['end'] + timedelta(seconds=__cache_window)
-        __cache[event]['end'] = event['end']
+        __cache[name] = existing_event
     else:
-        __logger.info(f'{event} was not found in cache(sz:{len(__cache)})')
+        __logger.info(f'{event["name"]} was not found in cache(sz:{len(__cache)})')
     __lock.release()
 
 def get_start_time() -> dt:
