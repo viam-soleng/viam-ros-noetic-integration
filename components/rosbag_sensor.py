@@ -1,5 +1,7 @@
 """
 the rosbag sensor will be used to copy data from a rosbag location to another file location
+
+TODO: validate if this is needed
 """
 import numpy as np
 

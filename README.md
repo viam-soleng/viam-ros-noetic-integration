@@ -7,11 +7,9 @@ Viam supports the ROS Noetic module using the rospy and viam python libraries.
 Clone to local machine, install and configure viam, use viam-config.json as example to start.
 
 ## TODO
-- update config to provide support for all messages
 - create as module 
 - add other sensors as needed
 - document
-- move to environment variables for module
 
 ## messages
 

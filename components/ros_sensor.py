@@ -1,5 +1,11 @@
 """
+ros_sensor.py
 
+This custom sensor supports:
+- dynamic loading of ROS Messages from both ROS and custom workspace libraries
+  (assuming ros environment scripts properly exported in module config)
+- Capture of all ROS data in message as python dictionary
+- upload of messages based on events
 """
 import importlib
 import logging
@@ -9,7 +15,7 @@ import rospy
 import threading
 
 from array import array
-from typing import Any, ClassVar, List, Mapping, Optional, Sequence
+from typing import Any, ClassVar, List, Mapping, Optional, Sequence, Union
 from typing_extensions import Self
 
 from viam.components.sensor import Sensor
@@ -22,19 +28,18 @@ from viam.proto.common import ResourceName
 from viam.resource.base import ResourceBase
 from viam.resource.registry import Registry, ResourceCreatorRegistration
 
-from .ros_timed_cache import RosTimedCache
-
+from filtering.filter_caching.component_cache import ComponentCache
 
 class RosSensor(Sensor, Reconfigurable):
     MODEL: ClassVar[Model] = Model(ModelFamily('viam-soleng', 'noetic'), 'sensor')
-    ros_topic: str
-    ros_msg_pkg: str
-    ros_msg_type: str
+    ros_topic: Union[str, None]
+    ros_msg_pkg: Union[str, None]
+    ros_msg_type: Union[str, None]
     dm_present: bool
     use_cache: bool
     cache_window: int
     events: List
-    msg_cache: RosTimedCache
+    msg_cache: ComponentCache
     msg: Any
     prev_msg: Any
     filter_condition: str
@@ -120,6 +125,7 @@ class RosSensor(Sensor, Reconfigurable):
                 dm_present = True
 
         # if any of these three items are changed this sensor needs to be modified
+        # TODO: if the message type changes, clear the queue
         if (
             ros_topic != self.ros_topic or              # message topic was changed
             ros_msg_pkg != self.ros_msg_pkg or          # message package was changed
@@ -149,7 +155,7 @@ class RosSensor(Sensor, Reconfigurable):
 
                 # validate cache window
                 if cache_window is None or cache_window == 0:
-                    raise Excpetion('cache_window mus be a valid integer greater than 0, if we are using caches')
+                    raise Exception('cache_window mus be a valid integer greater than 0, if we are using caches')
 
                 # now enable cache
                 self.cache_window = cache_window
@@ -157,7 +163,7 @@ class RosSensor(Sensor, Reconfigurable):
                 self.use_cache = True
                 if self.msg_cache is None:
                     self.logger.info('creating cache')
-                    self.msg_cache = RosTimedCache(seconds=self.cache_window)
+                    self.msg_cache = ComponentCache(component_name=config.name)
                 else:
                     self.logger.info('updating cache')
                     # change cache window if different from current cache window
@@ -181,7 +187,7 @@ class RosSensor(Sensor, Reconfigurable):
             # evaluate filter
             # cache?
             if self.use_cache:
-                self.msg_cache.add_item(self.msg)
+                self.msg_cache.add_data(self.msg)
 
     async def get_readings(
         self,
@@ -199,7 +205,7 @@ class RosSensor(Sensor, Reconfigurable):
         """
         if 'fromDataManagement' in extra and extra['fromDataManagement'] is True:
             if self.use_cache:
-                data = self.msg_cache.get_item()
+                data = self.msg_cache.get_data()
                 if data is not None:
                     return data
             raise NoCaptureToStoreError()
