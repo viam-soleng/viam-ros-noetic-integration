@@ -1,6 +1,5 @@
 """
 main entry point
-
 """
 import asyncio
 import sys
@@ -8,10 +7,12 @@ import sys
 from viam.components.camera import Camera
 from viam.components.movement_sensor import MovementSensor
 from viam.components.sensor import Sensor
+from viam.components.base import Base
 from viam.logging import getLogger
 from viam.module.module import Module
 
-from components import RosCamera, RosImu, RosLidar, RosSensor
+from components import RosBase, RosCamera, RosImu, RosLidar, RosSensor
+from filtering.filter_caching import global_event_table
 from utils import RospyManager
 
 logger = getLogger(__name__)
@@ -25,13 +26,16 @@ async def main(addr: str) -> None:
     logger.info('starting module')
     rclpy_mgr = RospyManager.get_mgr()
     rclpy_mgr.spin_node()
+    global_event_table.load_initial_dates()
 
     try:
         m = Module(addr)
-        #m.add_model_from_registry(Camera.SUBTYPE, RosCamera.MODEL)
-        #m.add_model_from_registry(MovementSensor.SUBTYPE, RosImu.MODEL)
-        #m.add_model_from_registry(Camera.SUBTYPE, RosLidar.MODEL)
-        #m.add_model_from_registry(Sensor.SUBTYPE, RosSensor.MODEL)
+        # technically not needed but here for completeness
+        m.add_model_from_registry(Base.SUBTYPE, RosBase.MODEL)
+        m.add_model_from_registry(Camera.SUBTYPE, RosCamera.MODEL)
+        m.add_model_from_registry(MovementSensor.SUBTYPE, RosImu.MODEL)
+        m.add_model_from_registry(Camera.SUBTYPE, RosLidar.MODEL)
+        m.add_model_from_registry(Sensor.SUBTYPE, RosSensor.MODEL)
         await m.start()
     except Exception as e:
         logger.fatal(f'error occurred starting module: {e}, exiting ({MODULE_START_ERR})')

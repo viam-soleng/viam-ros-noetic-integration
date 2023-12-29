@@ -6,6 +6,16 @@ This custom sensor supports:
   (assuming ros environment scripts properly exported in module config)
 - Capture of all ROS data in message as python dictionary
 - upload of messages based on events
+
+{
+ ...
+ events: [
+   {
+     name: 'EVENT_NAME',
+     eval_start: 'event_start_eval',
+     eval_stop:  'event_stop_eval',
+ ]
+}
 """
 import importlib
 import logging
@@ -15,6 +25,7 @@ import rospy
 import threading
 
 from array import array
+from datetime import datetime as dt
 from typing import Any, ClassVar, List, Mapping, Optional, Sequence, Union
 from typing_extensions import Self
 
@@ -28,7 +39,9 @@ from viam.proto.common import ResourceName
 from viam.resource.base import ResourceBase
 from viam.resource.registry import Registry, ResourceCreatorRegistration
 
+from filtering.filter_caching import global_event_table
 from filtering.filter_caching.component_cache import ComponentCache
+
 
 class RosSensor(Sensor, Reconfigurable):
     MODEL: ClassVar[Model] = Model(ModelFamily('viam-soleng', 'noetic'), 'sensor')
@@ -37,7 +50,6 @@ class RosSensor(Sensor, Reconfigurable):
     ros_msg_type: Union[str, None]
     dm_present: bool
     use_cache: bool
-    cache_window: int
     events: List
     msg_cache: ComponentCache
     msg: Any
@@ -101,6 +113,7 @@ class RosSensor(Sensor, Reconfigurable):
 
         If the topic or data type changes we will clear the prior cache
 
+        TODO: Revisit this logic -> disk based cache changes a couple of things
         :param config:
         :param dependencies:
         :return:
@@ -109,8 +122,7 @@ class RosSensor(Sensor, Reconfigurable):
         ros_topic = config.attributes.fields['ros_topic'].string_value
         ros_msg_pkg = config.attributes.fields['ros_msg_package'].string_value
         ros_msg_type = config.attributes.fields['ros_msg_type'].string_value
-        cache_window = config.attributes.fields['cache_window'].number_value
-        events = config.attributes.fields['events_info'].list_value
+        events = config.attributes.fields['events'].list_value
 
         dm_present = False
 
@@ -153,14 +165,10 @@ class RosSensor(Sensor, Reconfigurable):
                 if events is None or len(events) == 0:
                     raise Exception('cannot configure a cache without setting up at least one event trigger')
 
-                # validate cache window
-                if cache_window is None or cache_window == 0:
-                    raise Exception('cache_window mus be a valid integer greater than 0, if we are using caches')
-
                 # now enable cache
-                self.cache_window = cache_window
                 self.events = events
                 self.use_cache = True
+
                 if self.msg_cache is None:
                     self.logger.info('creating cache')
                     self.msg_cache = ComponentCache(component_name=config.name)
@@ -177,6 +185,7 @@ class RosSensor(Sensor, Reconfigurable):
 
     def subscriber_callback(self, msg):
         """
+    `   TODO: work out incorporating logging into sensor using configuration
 
         :param msg:
         :return:
@@ -184,6 +193,24 @@ class RosSensor(Sensor, Reconfigurable):
         with self.lock:
             self.prev_msg = self.msg
             self.msg = build_msg(msg)
+            if len(self.events) < 0:
+                if self.prev_msg is not None:
+                    for event in self.events:
+                        start_eval = event['eval_start']
+                        stop_eval = event['eval_stop']
+
+                        if eval(start_eval):
+                            self.logger.info(f'starting event: {event["name"]}')
+                            global_event_table.start_event({'name': event['name'], 'start': dt.now()})
+
+                        if eval(stop_eval):
+                            self.logger.info(f'stopping event: {event["name"]}')
+                            global_event_table.stop_event({'name': event['name'], 'end': dt.now()})
+
+                else:
+                    self.logger.debug('no previous message to compare to')
+
+
             # evaluate filter
             # cache?
             if self.use_cache:

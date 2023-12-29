@@ -10,6 +10,7 @@ Clone to local machine, install and configure viam, use viam-config.json as exam
 - create as module 
 - add other sensors as needed
 - document
+- VIAM_MODULE_DATA -> can we override just in case
 
 ## messages
 

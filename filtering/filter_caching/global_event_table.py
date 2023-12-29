@@ -17,6 +17,7 @@ must exist when stop_event is called
 Though diskcache gives the feels like a python dictionary, we cannot update the disk-backed
 dictionaries using d[event_name][k] = v
 We will retrieve the event, update it in memory and set the new event
+
 """
 import os
 from datetime import datetime as dt, timedelta
@@ -28,11 +29,11 @@ from viam.logging import getLogger
 
 # global variables for name of cache
 __CACHE_NAME__: str = 'global_event_table'
-__CACHE_BASE_DIR__: str = os.environ['VIAM_MODULE_DIR']
-
+__CACHE_BASE_DIR__: str = os.environ['CACHE_DIR']
+__DEFAULT_CACHE_WINDOW__: int = 20
 # cache data
 __cache: Cache = Cache(f'{__CACHE_BASE_DIR__}/{__CACHE_NAME__}')        # cache of events
-__cache_window: int = 20                                                # window in seconds
+__cache_window: int = __DEFAULT_CACHE_WINDOW__                          # window in seconds
 __lock: Lock = Lock()                                                   # lock for updating private variables
 
 # date/time data
@@ -41,6 +42,40 @@ __end_time: Union[dt, None] = None
 
 # logger
 __logger: Logger = getLogger(__name__)
+
+# try to set up new cache window size
+try:
+    __cache_window = int(os.environ['CACHE_WINDOW'])
+except KeyError:
+    __logger.warning(f'no CACHE_WINDOW environment value, falling back to default({__DEFAULT_CACHE_WINDOW__})')
+    __cache_window = __DEFAULT_CACHE_WINDOW__
+except ValueError:
+    __logger.warning(f'CACHE_WINDOW is not a valid int, falling back to default({__DEFAULT_CACHE_WINDOW__})')
+    __cache_window = __DEFAULT_CACHE_WINDOW__
+
+
+def load_initial_dates() -> None:
+    """
+    attempt to load dates from cache
+    # TODO: need to test this logic out
+    :return:
+    """
+    global __start_time
+    global __end_time
+
+    if __start_time is None:
+        try:
+            __start_time = __cache['__start_time']
+        except KeyError:
+            __logger.debug(f'start time not found in cache')
+            __start_time = None
+
+    if __end_time is None:
+        try:
+            __end_time = __cache['__end_time']
+        except KeyError:
+            __logger.debug(f'end time not found in cache')
+            __end_time = None
 
 
 def get_event_table() -> Cache:
@@ -83,6 +118,8 @@ def start_event(event: Dict) -> bool:
     if __start_time is None or event['start'] < __start_time:
         __logger.debug(f'{event["name"]} starting earlier than earliest event, updating time')
         __start_time = event['start'] - timedelta(seconds=__cache_window)
+        # every time we update start time, load it in the cache as well
+        __cache['__start_time'] = __start_time
 
     __lock.release()
     return __cache.add(event['name'], event)
@@ -106,9 +143,12 @@ def stop_event(event: Dict) -> None:
         if __end_time is None or event['end'] > __end_time:
             __logger.debug(f'{event["name"]} stopped later than last event, updating time')
             __end_time = event['end'] + timedelta(seconds=__cache_window)
+            # every time we update start time, load it in the cache as well
+            __cache['__end_time'] = __end_time
         __cache[name] = existing_event
     else:
-        __logger.info(f'{event["name"]} was not found in cache(sz:{len(__cache)})')
+        # this is not ideal as the ros_sensor will call stop_event often right now
+        __logger.debug(f'{event["name"]} was not found in cache(sz:{len(__cache)})')
     __lock.release()
 
 def get_start_time() -> dt:

@@ -86,7 +86,10 @@ into rosbag files for replay and troubleshooting.
       "attributes": {
         "ros_topic": "/camera/image_raw/compressed",
         "ros_msg_package": "sensor_msgs.msg",
-        "ros_msg_type": "CompressedImage"
+        "ros_msg_type": "CompressedImage",
+        "events": [
+          {"name":  "EVENT_NAME", "eval_start":  "PYTHON CODE HERE", "eval_stop":  "PYTHON_CODE_HERE"}
+        ]
       }
     }
 ```

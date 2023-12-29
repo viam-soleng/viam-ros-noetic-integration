@@ -15,6 +15,10 @@ for OVERLAY in "${OVERLAYS_ARRAY[@]}"; do
   source "${OVERLAY}"
 done
 
+# technically the same but we cover every case
+if [[ -z "${CACHE_DIR}" || "${CACHE_DIR}" == "" ]]; then
+  export CACHE_DIR=${VIAM_MODULE_DATA}
+
 
 if [[ ! -f ${SCRIPT_DIR}/venv/bin/python ]]; then
   echo "INFO: Attempting to setup python environment"

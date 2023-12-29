@@ -1,7 +1,9 @@
 """
 module: component cache
 
-each component has the ability to create a
+each component has the ability to create a disk based cache
+
+TODO: make ViAM_MODULE_DATA variable
 """
 import os
 from .global_event_table import get_active_events
@@ -53,8 +55,8 @@ class ComponentCache(object):
         :param component_name:
         """
         # todo: validate with team that this is a valid variable
-        viam_module_directory = os.environ['VIAM_MODULE_DIR']
-        self.__queue = Deque(directory=f'{viam_module_directory}/{component_name}')
+        cache_dir = os.environ['CACHE_DIR']
+        self.__queue = Deque(directory=f'{cache_dir}/{component_name}')
 
     def get_data(self) -> Union[Dict, None]:
         """
