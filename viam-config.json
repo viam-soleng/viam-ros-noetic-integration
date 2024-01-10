@@ -3,7 +3,7 @@
     {
       "type": "local",
       "name": "ros-noetic",
-      "executable_path": "/home/viam/nuport/run.sh"
+      "executable_path": "/home/viam/ros-noetic/run.sh"
     }
   ],
   "components": [
@@ -99,3 +99,5 @@
     }
   ]
 }
+
+{"keyID":"f564d940-ae53-4d75-8c9a-3b7b79744a07","key":"93tbhrleph6cwqxkk9jv6g0hjt273qlr"}

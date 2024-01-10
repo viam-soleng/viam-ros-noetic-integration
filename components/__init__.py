@@ -1,3 +1,6 @@
+"""
+all classes are available at top level package
+"""
 from .ros_sensor import RosSensor
 from .ros_lidar import RosLidar
 from .ros_imu import RosImu

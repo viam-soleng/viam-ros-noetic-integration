@@ -13,9 +13,6 @@ from logging import Logger
 from typing import Dict, Union
 from viam.logging import getLogger
 
-__logger: Logger = getLogger(__name__)
-
-
 class CachedItem(object):
     """
 
@@ -54,25 +51,32 @@ class ComponentCache(object):
 
         :param component_name:
         """
-        # todo: validate with team that this is a valid variable
         cache_dir = os.environ['CACHE_DIR']
+        self.__logger: Logger = getLogger(f'{component_name}_cache')
         self.__queue = Deque(directory=f'{cache_dir}/{component_name}')
 
     def get_data(self) -> Union[Dict, None]:
         """
+        Attempt to return data from the queue, if data does not exist return None
 
         :return:
         """
-        ci = self.__queue.popleft()
-        ae = get_active_events()
-        if len(ae) != 0:
-            ci['v_metadata']['events'] = ae
-            return ci
-        # event analysis
-        return None
+        try:
+            ci = self.__queue.popleft()
+            ae = get_active_events()
+            if len(ae) != 0:
+                data_item = ci.get_data()
+                data_item['v_metadata']['events'] = ae
+                return data_item
+        except IndexError as ie:
+            self.__logger.debug(f'cache is empty: {ie}')
+            return None
 
-    def add_data(self, item) -> bool:
+
+    def add_data(self, item) -> None:
         """
+        Attempt to add the data item to the queue
+        Nothing is returned at this time
 
         :param item:
         :return:

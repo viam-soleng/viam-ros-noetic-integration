@@ -18,6 +18,7 @@ done
 # technically the same but we cover every case
 if [[ -z "${CACHE_DIR}" || "${CACHE_DIR}" == "" ]]; then
   export CACHE_DIR=${VIAM_MODULE_DATA}
+fi
 
 
 if [[ ! -f ${SCRIPT_DIR}/venv/bin/python ]]; then

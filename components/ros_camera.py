@@ -29,11 +29,13 @@ class RosCamera(Camera, Reconfigurable):
     image: Union[ROSImage, CompressedImage]
     bridge: CvBridge
     is_compressed: bool
+    image: Optional[ROSImage]
 
     @classmethod
     def new(cls, config: ComponentConfig, dependencies: Mapping[ResourceName, ResourceBase]) -> Self:
         camera = cls(config.name)
         camera.reconfigure(config, dependencies)
+
         return camera
 
     @classmethod
@@ -42,6 +44,12 @@ class RosCamera(Camera, Reconfigurable):
         if topic == '':
             raise Exception('ros_topic required')
         return []
+
+    def __init__(self, name: str) -> None:
+        super().__init__(name)
+        self.lock = Lock()
+        self.bridge = CvBridge()
+        self.image = None
 
     def reconfigure(self, config: ComponentConfig, dependencies: Mapping[ResourceName, ResourceBase]) -> None:
         self.props = Camera.Properties(
@@ -59,8 +67,6 @@ class RosCamera(Camera, Reconfigurable):
             dtype = CompressedImage
 
         rospy.Subscriber(self.ros_topic, dtype, self.subscriber_callback)
-        self.bridge = CvBridge()
-        self.lock = Lock()
 
     def subscriber_callback(self, image: Union[ROSImage, CompressedImage]) -> None:
         self.image = image

@@ -67,14 +67,14 @@ def load_initial_dates() -> None:
         try:
             __start_time = __cache['__start_time']
         except KeyError:
-            __logger.debug(f'start time not found in cache')
+            __logger.warning(f'start time not found in cache')
             __start_time = None
 
     if __end_time is None:
         try:
             __end_time = __cache['__end_time']
         except KeyError:
-            __logger.debug(f'end time not found in cache')
+            __logger.warning(f'end time not found in cache')
             __end_time = None
 
 
@@ -96,7 +96,13 @@ def get_active_events() -> List[str]:
 
     __lock.acquire()
     for key in __cache:
-        e = __cache[key]['end']
+        if key == '__start_time' or key == '__end_time':
+            continue
+        __logger.info(f'get_active_events() -> {key}: {__cache[key]}')
+        e = None
+        if 'end' in __cache[key]:
+            e = __cache[key]['end']
+
         if e is None or e < __end_time:
             keys.append(key)
         else:
@@ -104,6 +110,7 @@ def get_active_events() -> List[str]:
             del(__cache[key])
 
     __lock.release()
+    __logger.info(f'returning active events: {keys}')
     return keys
 
 def start_event(event: Dict) -> bool:
@@ -122,6 +129,7 @@ def start_event(event: Dict) -> bool:
         __cache['__start_time'] = __start_time
 
     __lock.release()
+    __logger.info(f'added event {event["name"]}')
     return __cache.add(event['name'], event)
 
 
@@ -149,6 +157,7 @@ def stop_event(event: Dict) -> None:
     else:
         # this is not ideal as the ros_sensor will call stop_event often right now
         __logger.debug(f'{event["name"]} was not found in cache(sz:{len(__cache)})')
+    __logger.info(f'processed stop event for: {event["name"]}')
     __lock.release()
 
 def get_start_time() -> dt:

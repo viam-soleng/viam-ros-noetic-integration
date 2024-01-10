@@ -102,9 +102,11 @@ class RosSensor(Sensor, Reconfigurable):
         self.ros_msg_pkg = None
         self.ros_msg_type = None
         self.msg = None
+        self.msg_cache = None
         self.prev_msg = None
         self.dm_present = False
         self.use_cache = False
+        self.events = []
 
     def reconfigure(self, config: ComponentConfig, dependencies: Mapping[ResourceName, ResourceBase])-> None:
         """
@@ -113,7 +115,6 @@ class RosSensor(Sensor, Reconfigurable):
 
         If the topic or data type changes we will clear the prior cache
 
-        TODO: Revisit this logic -> disk based cache changes a couple of things
         :param config:
         :param dependencies:
         :return:
@@ -127,14 +128,15 @@ class RosSensor(Sensor, Reconfigurable):
         dm_present = False
 
         for sc in config.service_configs:
-            # TODO: RDK/SDK bug that does not pass attributes of service config
             #
             # work-around: if the data_manager service is present we will assume the
             #              readings method for the sensor is turned on
             #              this will be documented and shared, once this bug is
             #              addressed we will update the code
             if sc.type == 'rdk:service:data_manager':
-                dm_present = True
+                if 'capture_methods' in sc.attributes and len(sc.attributes['capture_methods']) > 0:
+                    self.logger.info(f'found {len(sc.attributes["capture_methods"])} capture method(s) for sensor')
+                    dm_present = True
 
         # if any of these three items are changed this sensor needs to be modified
         # TODO: if the message type changes, clear the queue
@@ -179,6 +181,7 @@ class RosSensor(Sensor, Reconfigurable):
             else:
                 # no cache - if it was alive before now it is not
                 self.logger.info('no cache needed, disabling anything that was previously created')
+                self.use_cache = False
 
             # setup subscriber
             rospy.Subscriber(self.ros_topic, ros_sensor_cls, self.subscriber_callback)
@@ -193,26 +196,20 @@ class RosSensor(Sensor, Reconfigurable):
         with self.lock:
             self.prev_msg = self.msg
             self.msg = build_msg(msg)
-            if len(self.events) < 0:
-                if self.prev_msg is not None:
-                    for event in self.events:
-                        start_eval = event['eval_start']
-                        stop_eval = event['eval_stop']
+            if len(self.events) > 0:
+                for event in self.events:
+                    start_eval = event['eval_start']
+                    stop_eval = event['eval_stop']
 
-                        if eval(start_eval):
-                            self.logger.info(f'starting event: {event["name"]}')
-                            global_event_table.start_event({'name': event['name'], 'start': dt.now()})
+                    self.logger.info(f'msg: {self.msg}, eval: {start_eval} -> {stop_eval}')
+                    if eval(start_eval):
+                        self.logger.info(f'starting event: {event["name"]}')
+                        global_event_table.start_event({'name': event['name'], 'start': dt.now()})
 
-                        if eval(stop_eval):
-                            self.logger.info(f'stopping event: {event["name"]}')
-                            global_event_table.stop_event({'name': event['name'], 'end': dt.now()})
+                    if eval(stop_eval):
+                        self.logger.info(f'stopping event: {event["name"]}')
+                        global_event_table.stop_event({'name': event['name'], 'end': dt.now()})
 
-                else:
-                    self.logger.debug('no previous message to compare to')
-
-
-            # evaluate filter
-            # cache?
             if self.use_cache:
                 self.msg_cache.add_data(self.msg)
 
