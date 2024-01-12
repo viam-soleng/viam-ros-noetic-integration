@@ -54,7 +54,6 @@ class RosSensor(Sensor, Reconfigurable):
     msg_cache: ComponentCache
     msg: Any
     prev_msg: Any
-    filter_condition: str
     lock: threading.Lock
     logger: logging.Logger
 
@@ -188,7 +187,6 @@ class RosSensor(Sensor, Reconfigurable):
 
     def subscriber_callback(self, msg):
         """
-    `   TODO: work out incorporating logging into sensor using configuration
 
         :param msg:
         :return:
@@ -201,7 +199,6 @@ class RosSensor(Sensor, Reconfigurable):
                     start_eval = event['eval_start']
                     stop_eval = event['eval_stop']
 
-                    self.logger.info(f'msg: {self.msg}, eval: {start_eval} -> {stop_eval}')
                     if eval(start_eval):
                         self.logger.info(f'starting event: {event["name"]}')
                         global_event_table.start_event({'name': event['name'], 'start': dt.now()})
@@ -230,6 +227,7 @@ class RosSensor(Sensor, Reconfigurable):
         if 'fromDataManagement' in extra and extra['fromDataManagement'] is True:
             if self.use_cache:
                 data = self.msg_cache.get_data()
+                self.logger.info(f'data management retrieved data: {data}')
                 if data is not None:
                     return data
             raise NoCaptureToStoreError()

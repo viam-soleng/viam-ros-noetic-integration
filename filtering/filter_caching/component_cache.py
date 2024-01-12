@@ -6,8 +6,8 @@ each component has the ability to create a disk based cache
 TODO: make ViAM_MODULE_DATA variable
 """
 import os
-from .global_event_table import get_active_events
-from datetime import datetime as dt
+from .global_event_table import get_active_events, get_cache_window
+from datetime import datetime as dt, timedelta
 from diskcache import Deque
 from logging import Logger
 from typing import Dict, Union
@@ -62,14 +62,21 @@ class ComponentCache(object):
         :return:
         """
         try:
-            ci = self.__queue.popleft()
-            ae = get_active_events()
+            peek = self.__queue.peekleft()
+            ae = get_active_events(peek.get_cache_time())
             if len(ae) != 0:
+                ci = self.__queue.popleft()
+                # fix this make cache item subscriptable
                 data_item = ci.get_data()
                 data_item['v_metadata']['events'] = ae
                 return data_item
+            # if we are here there is nothing to return
+            if peek.get_cache_time() < (dt.now() - timedelta(seconds=get_cache_window())):
+                i = self.__queue.popleft()
+                self.__logger.info(f'removing element from cache: {i}')
+            return None
         except IndexError as ie:
-            self.__logger.debug(f'cache is empty: {ie}')
+            self.__logger.debug(f'get_data(): cache is empty: {ie}')
             return None
 
 

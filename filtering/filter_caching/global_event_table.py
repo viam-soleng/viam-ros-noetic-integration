@@ -86,32 +86,63 @@ def get_event_table() -> Cache:
     """
     return __cache
 
-def get_active_events() -> List[str]:
+def get_active_events(at_time: dt) -> List[str]:
     """
-    return all active events in the cache as a set of keys
+    return all active events based on the time of the data and
+    time of the event
 
+    How this works:
+    (1) get all events in the cache:
+        (1) for each event, attempt to get the end time of the event
+
+    ##
+    The issue, when looking to get the active events, we are also
+    looking to get the
+    ##
+
+    :param at_time:
     :return:
     """
-    keys = []
+    global __start_time
+    global __end_time
+
+    events = []
+    date_now = dt.now()
+
+    __logger.info('get_active_events(): attempting to build list')
 
     __lock.acquire()
-    for key in __cache:
-        if key == '__start_time' or key == '__end_time':
-            continue
-        __logger.info(f'get_active_events() -> {key}: {__cache[key]}')
-        e = None
-        if 'end' in __cache[key]:
-            e = __cache[key]['end']
+    for event in __cache:
+        # setup variables
+        end = None
 
-        if e is None or e < __end_time:
-            keys.append(key)
+        # ignore __start_time & __end_time variables in cache
+        if event == '__start_time' or event == '__end_time':
+            continue
+
+        # TODO: the end event bug is here!!
+        # now we have a possible active event
+        if 'end' in __cache[event]:
+            end = __cache[event]['end']
+
+            # the event has ended, is the cache item within the window
+            end_window = end + timedelta(seconds=__cache_window)
+            if at_time < end_window:
+                events.append(event)
+
+            # finally has the end_window passed
+            if end_window < (date_now + timedelta(seconds=__cache_window)):
+                del(__cache[event])
+
         else:
-            __logger.info(f'removing old stopped event: {key}')
-            del(__cache[key])
+            # event is still active
+            events.append(event)
+            continue
 
     __lock.release()
-    __logger.info(f'returning active events: {keys}')
-    return keys
+    __logger.info(f'returning active events: {events}')
+
+    return events
 
 def start_event(event: Dict) -> bool:
     """
@@ -122,6 +153,7 @@ def start_event(event: Dict) -> bool:
     global __start_time
     __lock.acquire()
 
+    __logger.info(f'start_event(): attempting event: {event["start"]} < {__start_time}')
     if __start_time is None or event['start'] < __start_time:
         __logger.debug(f'{event["name"]} starting earlier than earliest event, updating time')
         __start_time = event['start'] - timedelta(seconds=__cache_window)
@@ -129,7 +161,7 @@ def start_event(event: Dict) -> bool:
         __cache['__start_time'] = __start_time
 
     __lock.release()
-    __logger.info(f'added event {event["name"]}')
+    __logger.info(f'start_event(): added event {event["name"]}')
     return __cache.add(event['name'], event)
 
 
@@ -173,3 +205,6 @@ def get_end_time() -> dt:
     :return:
     """
     return __end_time
+
+def get_cache_window() -> int:
+    return __cache_window
