@@ -131,7 +131,7 @@ def get_active_events(at_time: dt) -> List[str]:
                 events.append(event)
 
             # finally has the end_window passed
-            if end_window < (date_now + timedelta(seconds=__cache_window)):
+            if not (end_window > (date_now + timedelta(seconds=__cache_window))):
                 del(__cache[event])
 
         else:
