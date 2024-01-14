@@ -112,7 +112,7 @@ class RosSensor(Sensor, Reconfigurable):
         self.use_cache = False
         self.events = []
 
-    def reconfigure(self, config: ComponentConfig, dependencies: Mapping[ResourceName, ResourceBase])-> None:
+    def reconfigure(self, config: ComponentConfig, dependencies: Mapping[ResourceName, ResourceBase]) -> None:
         """
         reconfigure is called for all components when a configuration update occurs
         we need to detect if the component has changed to decide on building a new cache
@@ -132,11 +132,6 @@ class RosSensor(Sensor, Reconfigurable):
         dm_present = False
 
         for sc in config.service_configs:
-            #
-            # work-around: if the data_manager service is present we will assume the
-            #              readings method for the sensor is turned on
-            #              this will be documented and shared, once this bug is
-            #              addressed we will update the code
             if sc.type == 'rdk:service:data_manager':
                 if 'capture_methods' in sc.attributes and len(sc.attributes['capture_methods']) > 0:
                     self.logger.info(f'found {len(sc.attributes["capture_methods"])} capture method(s) for sensor')
