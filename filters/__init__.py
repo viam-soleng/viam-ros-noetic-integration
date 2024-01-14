@@ -1,2 +1,0 @@
-from base_filter import BaseFilter
-from fake_filter import AlwaysTrue

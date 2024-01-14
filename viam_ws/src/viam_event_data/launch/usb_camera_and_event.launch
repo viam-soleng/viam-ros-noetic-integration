@@ -1,0 +1,4 @@
+<launch>
+ <include file="$(find video_stream_opencv)/launch/camera.launch"/>
+ <node name="viam_event_node" pkg="viam_event_data" type="generate_data.py" />
+</launch>

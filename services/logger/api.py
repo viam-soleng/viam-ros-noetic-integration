@@ -13,7 +13,7 @@ from proto.noetic_logger_pb2 import LoggerRequest, LoggerResponse
 
 
 class NoeticLoggerService(ServiceBase):
-    SUBTYPE: Final = Subtype("viam-soleng", RESOURCE_TYPE_SERVICE, "noetic_logger")
+    SUBTYPE: Final = Subtype("viam-soleng", RESOURCE_TYPE_SERVICE, "logger")
 
     @abc.abstractmethod
     async def status(self) -> LoggerResponse:
