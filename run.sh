@@ -1,7 +1,5 @@
 #!/bin/bash
 
-printenv
-
 SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &> /dev/null && pwd)
 
 # setup virtual environment if needed
