@@ -29,7 +29,7 @@ class RosImuProperties(MovementSensor.Properties):
 
 class RosImu(MovementSensor, Reconfigurable):
     MODEL: ClassVar[Model] = Model(ModelFamily('viam-soleng', 'noetic'), 'imu')
-    ros_topic: str
+    ros_topic: Optional[str]
     msg: Imu
     lock: Lock
     props: RosImuProperties
@@ -49,9 +49,10 @@ class RosImu(MovementSensor, Reconfigurable):
 
     def __init__(self, name: str) -> None:
         super().__init__(name)
+        self.ros_topic = None
         self.msg = None
-        self.props = RosImuProperties()
         self.lock = Lock()
+        self.props = RosImuProperties()
 
     def reconfigure(self, config: ComponentConfig, dependencies: Mapping[ResourceName, ResourceBase]) -> None:
         self.ros_topic = config.attributes.fields['ros_topic'].string_value
