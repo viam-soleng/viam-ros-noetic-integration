@@ -50,7 +50,6 @@ class RosCamera(Camera, Reconfigurable):
         self.lock = Lock()
 
     def reconfigure(self, config: ComponentConfig, dependencies: Mapping[ResourceName, ResourceBase]) -> None:
-        # todo: need to account for distortion parameters?
         self.props = Camera.Properties(
             supports_pcd=False,
             distortion_parameters=DistortionParameters(),
