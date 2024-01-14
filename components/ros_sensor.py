@@ -39,8 +39,8 @@ from viam.proto.common import ResourceName
 from viam.resource.base import ResourceBase
 from viam.resource.registry import Registry, ResourceCreatorRegistration
 
-from filtering.filter_caching import global_event_table
-from filtering.filter_caching.component_cache import ComponentCache
+from filtering.cache import global_event_table
+from filtering.cache.component_cache import ComponentCache
 
 
 class RosSensor(Sensor, Reconfigurable):
@@ -91,6 +91,11 @@ class RosSensor(Sensor, Reconfigurable):
         return []
 
     def __init__(self, name: str) -> None:
+        """
+        create sensor object
+
+        :param name:
+        """
         super().__init__(name)
         self.logger = getLogger(self.__class__.__name__)    # logger only needs to be setup once
         self.lock = threading.Lock()                        # lock only needs to be setup once
@@ -118,7 +123,7 @@ class RosSensor(Sensor, Reconfigurable):
         :param dependencies:
         :return:
         """
-
+        self.logger.info('reconfigure sensor')
         ros_topic = config.attributes.fields['ros_topic'].string_value
         ros_msg_pkg = config.attributes.fields['ros_msg_package'].string_value
         ros_msg_type = config.attributes.fields['ros_msg_type'].string_value
@@ -162,9 +167,6 @@ class RosSensor(Sensor, Reconfigurable):
             if dm_present:
                 # data management is present and collecting we need to use cache
                 self.logger.info('setting up cache')
-                # validate events
-                if events is None or len(events) == 0:
-                    raise Exception('cannot configure a cache without setting up at least one event trigger')
 
                 # now enable cache
                 self.events = events
@@ -227,7 +229,7 @@ class RosSensor(Sensor, Reconfigurable):
         if 'fromDataManagement' in extra and extra['fromDataManagement'] is True:
             if self.use_cache:
                 data = self.msg_cache.get_data()
-                self.logger.info(f'data management retrieved data: {data}')
+                self.logger.debug(f'data management retrieved data: {data}')
                 if data is not None:
                     return data
             raise NoCaptureToStoreError()
@@ -238,6 +240,7 @@ class RosSensor(Sensor, Reconfigurable):
 
 def build_msg(msg):
     """
+    build the python dictionary from the ros message
 
     :param msg:
     :return:

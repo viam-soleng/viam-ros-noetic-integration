@@ -1,15 +1,21 @@
 """
-TODO: do we need to support updates to camera properties
+ros_camera.py
+
+The ros camera supports
+- sensor_msgs.msg.ROSImage
+- sensor_msgs.msg.CompressedImage
 """
 from PIL import Image
 import cv2
 import numpy as np
 import rospy
 import viam
+from logging import Logger
 from threading import Lock
 from typing import ClassVar, List, Mapping, Optional, Sequence, Tuple, Union
 from typing_extensions import Self
 from viam.components.camera import Camera, IntrinsicParameters, DistortionParameters
+from viam.logging import getLogger
 from viam.module.types import Reconfigurable
 from viam.proto.app.robot import ComponentConfig
 from viam.proto.common import ResourceName
@@ -30,6 +36,7 @@ class RosCamera(Camera, Reconfigurable):
     bridge: CvBridge
     is_compressed: bool
     image: Optional[ROSImage]
+    logger: Logger
 
     @classmethod
     def new(cls, config: ComponentConfig, dependencies: Mapping[ResourceName, ResourceBase]) -> Self:
@@ -50,8 +57,15 @@ class RosCamera(Camera, Reconfigurable):
         self.lock = Lock()
         self.bridge = CvBridge()
         self.image = None
+        self.logger = getLogger(name)
 
     def reconfigure(self, config: ComponentConfig, dependencies: Mapping[ResourceName, ResourceBase]) -> None:
+        """
+        reconfigure ros camera
+
+        TODO: add camera info/description topics as needed
+        """
+        self.logger.info('reconfigure ros camera')
         self.props = Camera.Properties(
             supports_pcd=False,
             distortion_parameters=DistortionParameters(),
@@ -69,9 +83,15 @@ class RosCamera(Camera, Reconfigurable):
         rospy.Subscriber(self.ros_topic, dtype, self.subscriber_callback)
 
     def subscriber_callback(self, image: Union[ROSImage, CompressedImage]) -> None:
+        """
+        set image to ROS image
+        """
         self.image = image
 
     async def get_image(self, mime_type: str = '', timeout: Optional[float] = None, **kwargs) -> Image:
+        """
+        convert to viam image
+        """
         with self.lock:
             img = self.image
 
@@ -89,9 +109,14 @@ class RosCamera(Camera, Reconfigurable):
             timeout: Optional[float] = None,
             **kwargs
     ) -> Tuple[List[viam.media.video.NamedImage], viam.proto.common.ResponseMetadata]:
+        """
+
+        """
+        self.logger.warning('not implemented')
         raise NotImplementedError()
 
     async def get_point_cloud(self, *, timeout: Optional[float] = None, **kwargs) -> Tuple[bytes, str]:
+        self.logger.warning('not implemented')
         raise NotImplementedError()
 
     async def get_properties(self, *, timeout: Optional[float] = None, **kwargs) -> Camera.Properties:
@@ -104,6 +129,7 @@ class RosCamera(Camera, Reconfigurable):
             timeout: Optional[float] = None,
             **kwargs
     ) -> Mapping[str, ValueTypes]:
+        self.logger.warning('not implemented')
         raise NotImplementedError()
 
 

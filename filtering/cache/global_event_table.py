@@ -18,6 +18,7 @@ Though diskcache gives the feels like a python dictionary, we cannot update the 
 dictionaries using d[event_name][k] = v
 We will retrieve the event, update it in memory and set the new event
 
+TODO: do we need __start_time and __end_time attributes?
 """
 import os
 from datetime import datetime as dt, timedelta
@@ -86,19 +87,11 @@ def get_event_table() -> Cache:
     """
     return __cache
 
+
 def get_active_events(at_time: dt) -> List[str]:
     """
     return all active events based on the time of the data and
     time of the event
-
-    How this works:
-    (1) get all events in the cache:
-        (1) for each event, attempt to get the end time of the event
-
-    ##
-    The issue, when looking to get the active events, we are also
-    looking to get the
-    ##
 
     :param at_time:
     :return:
@@ -107,9 +100,8 @@ def get_active_events(at_time: dt) -> List[str]:
     global __end_time
 
     events = []
-    date_now = dt.now()
 
-    __logger.info('get_active_events(): attempting to build list')
+    __logger.debug('get_active_events(): attempting to build list')
 
     __lock.acquire()
     for event in __cache:
@@ -120,18 +112,16 @@ def get_active_events(at_time: dt) -> List[str]:
         if event == '__start_time' or event == '__end_time':
             continue
 
-        # TODO: the end event bug is here!!
         # now we have a possible active event
+        # if the event has end this means that the event is possibly over
         if 'end' in __cache[event]:
             end = __cache[event]['end']
-
-            # the event has ended, is the cache item within the window
-            end_window = end + timedelta(seconds=__cache_window)
-            if at_time < end_window:
+            # cache item has occurred before event is over
+            if at_time < end:
                 events.append(event)
-
-            # finally has the end_window passed
-            if not (end_window > (date_now + timedelta(seconds=__cache_window))):
+            elif at_time > end:
+                # no ties
+                __logger.info(f'get_active_events(): removing {event} from cache')
                 del(__cache[event])
 
         else:
@@ -140,9 +130,10 @@ def get_active_events(at_time: dt) -> List[str]:
             continue
 
     __lock.release()
-    __logger.info(f'returning active events: {events}')
+    __logger.debug(f'returning active events: {events}')
 
     return events
+
 
 def start_event(event: Dict) -> bool:
     """
@@ -153,10 +144,12 @@ def start_event(event: Dict) -> bool:
     global __start_time
     __lock.acquire()
 
+    event['start'] = event['start'] - timedelta(seconds=__cache_window)
     __logger.info(f'start_event(): attempting event: {event["start"]} < {__start_time}')
     if __start_time is None or event['start'] < __start_time:
         __logger.debug(f'{event["name"]} starting earlier than earliest event, updating time')
-        __start_time = event['start'] - timedelta(seconds=__cache_window)
+        # set start time to before the event starts (ensuring
+        __start_time = event['start']
         # every time we update start time, load it in the cache as well
         __cache['__start_time'] = __start_time
 
@@ -177,20 +170,21 @@ def stop_event(event: Dict) -> None:
         name = event['name']
         # get existing event
         existing_event = __cache[name]
-        existing_event['end'] = event['end']
+        existing_event['end'] = event['end'] + timedelta(seconds=__cache_window)
 
         # do we update event
-        if __end_time is None or event['end'] > __end_time:
+        if __end_time is None or existing_event['end'] > __end_time:
             __logger.debug(f'{event["name"]} stopped later than last event, updating time')
-            __end_time = event['end'] + timedelta(seconds=__cache_window)
+            __end_time = event['end']
             # every time we update start time, load it in the cache as well
             __cache['__end_time'] = __end_time
         __cache[name] = existing_event
     else:
         # this is not ideal as the ros_sensor will call stop_event often right now
         __logger.debug(f'{event["name"]} was not found in cache(sz:{len(__cache)})')
-    __logger.info(f'processed stop event for: {event["name"]}')
+    __logger.debug(f'processed stop event for: {event["name"]}')
     __lock.release()
+
 
 def get_start_time() -> dt:
     """
@@ -199,12 +193,14 @@ def get_start_time() -> dt:
     """
     return __start_time
 
+
 def get_end_time() -> dt:
     """
 
     :return:
     """
     return __end_time
+
 
 def get_cache_window() -> int:
     return __cache_window

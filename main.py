@@ -12,7 +12,7 @@ from viam.logging import getLogger
 from viam.module.module import Module
 
 from components import RosBase, RosCamera, RosImu, RosLidar, RosSensor
-from filtering.filter_caching import global_event_table
+from filtering.cache import global_event_table
 from utils import RospyManager
 
 logger = getLogger(__name__)

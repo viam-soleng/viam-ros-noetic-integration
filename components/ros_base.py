@@ -19,9 +19,11 @@ TODO: Need to test with noetic
 from threading import Lock
 import rospy
 import viam
+from logging import Logger
 from typing import Any, ClassVar, Dict, Mapping, Optional, Sequence, Tuple
 from typing_extensions import Self
 from viam.components.base import Base
+from viam.logging import getLogger
 from viam.module.types import Reconfigurable
 from viam.proto.app.robot import ComponentConfig
 from viam.proto.common import ResourceName
@@ -30,6 +32,7 @@ from viam.resource.registry import Registry, ResourceCreatorRegistration
 from viam.resource.types import Model, ModelFamily
 from viam.utils import ValueTypes
 from geometry_msgs.msg import Twist
+
 
 class RosBase(Base, Reconfigurable):
     """
@@ -43,6 +46,7 @@ class RosBase(Base, Reconfigurable):
     twist_msg: Twist
     publisher: rospy.Publisher
     timer: rospy.Timer
+    logger: Logger
 
     @classmethod
     def new(cls, config: ComponentConfig, dependencies: Mapping[ResourceName, ResourceBase]) -> Self:
@@ -81,6 +85,17 @@ class RosBase(Base, Reconfigurable):
 
         return []
 
+    def __init__(self, name: str) -> None:
+        super().__init__(name)
+        self.is_base_moving = False
+        self.lock = Lock
+        self.publish_time = 0
+        self.ros_topic = ''
+        self.twist_msg = Twist()
+        self.publisher = None
+        self.timer = None
+        self.logger = getLogger(name)
+
     def ros_publisher_cb(self) -> None:
         """
         ros_publisher_cb will be called by the ros node to publish twist messages
@@ -94,14 +109,17 @@ class RosBase(Base, Reconfigurable):
         reconfigure will reconfigure the ros component when the rdk configuration is updated
         this will require shutting down the publisher if it exists as well as the timer
         and resetting on possible new configurations
+
+        :param config:
+        :param dependencies:
+        :return:
         """
+        self.logger.info('attempting ros_base reconfigure')
         self.ros_topic = config.attributes.fields['ros_topic'].string_value
         self.publish_time = int(config.attributes.fields['publish_time'].string_value)
-        self.twist_msg = Twist()
         self.publisher = rospy.Publisher(self.ros_topic, Twist, queue_size=10)
         self.timer = rospy.Timer(rospy.Duration(self.publish_time), self.ros_publisher_cb)
         self.is_base_moving = False
-        self.lock = Lock()
 
     async def move_straight(
             self,
@@ -190,8 +208,8 @@ class RosBase(Base, Reconfigurable):
         return the base width and turning radius
 
         Currently not implemented
-        TODO: add parameters to support this
         """
+        self.logger.warning('not implemented')
         raise NotImplementedError()
 
     async def do_command(
@@ -203,9 +221,8 @@ class RosBase(Base, Reconfigurable):
     ) -> Mapping[str, ValueTypes]:
         """
         Currently not supported
-
-        TODO: add custom base-related services here
         """
+        self.logger.warning('not implemented')
         raise NotImplementedError()
 
     async def close(self):
@@ -214,6 +231,7 @@ class RosBase(Base, Reconfigurable):
         :return:
         """
         self.timer.shutdown()
+
 
 """
 Register the new MODEL as well as define how the object is validated 

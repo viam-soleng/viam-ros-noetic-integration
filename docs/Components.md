@@ -5,10 +5,30 @@ Viam components can map to various ROS messages by making use of both the [viam-
 sdk to convert these message to component data (in the form of python dictionaries) which will allow for integration
 into the viam platform.
 
+## Base
+the [ros base](../components/ros_base.py) component supports publishing `Twist` message to move the robot
+
+### Configuration
+```json
+{
+  "attributes": {
+    "publish_time": "0.2",
+    "ros_topic": "/viamrosone/cmd_vel"
+  },
+  "depends_on": [],
+  "name": "rosbase",
+  "type": "base",
+  "model": "viamlabs:ros2:base"
+}
+```
+
 ## Cameras
 
 In viam a [camera component](https://docs.viam.com/components/camera/) will take data from the camera and store the 
 image and access time in a protobuf message that can be used to send data to the platform.
+
+the `ros_camera` supports the `ROSIamge` and `CompressedImage`. if we set the compressed flag we will attempt to 
+use compressed images, if the topic does not support the type an error will be raised.
 
 This is valuable when used in conjunction with the viam web/mobile based apis for viewing our robot cameras in 
 real-time over the internet. The Viam api's make use of both webrtc & dynamic dns to provide secure real-time 
@@ -23,6 +43,19 @@ that if we are using the image as a sensor, we **must** use the compressed image
 
 #### configuration
 
+```json
+{
+  "type": "camera",
+  "model": "viam-soleng:noetic:camera",
+  "attributes": {
+    "ros_topic": "/camera/image_raw/compressed",
+    "compressed": "true"
+  },
+  "depends_on": [],
+  "name": "ros_camera"
+}
+```
+
 ## IMU (Movement Sensors)
 
 In viam a [movement sensor](https://docs.viam.com/components/movement-sensor/) represents an IMU, GPS, gyroscope, etc.
@@ -32,6 +65,18 @@ At this time we have only integrated the [rospy imu](http://docs.ros.org/en/noet
 message type.
 
 ### configuration
+
+```json
+{
+  "model": "viamlabs:ros2:imu",
+  "attributes": {
+    "ros_topic": "/viamrosone/imu"
+  },
+  "depends_on": [],
+  "name": "imu",
+  "type": "movement_sensor"
+}
+```
 
 ## Lidar
 
@@ -45,6 +90,18 @@ can be consumed by used by the viam [SLAM service](https://docs.viam.com/mobilit
 This provides an option to quickly configure a SLAM service using lidar that has only ROS drivers.
 
 ### configuration
+
+```json
+{
+  "name": "lidar",
+  "type": "camera",
+  "model": "viamlabs:ros2:lidar",
+  "attributes": {
+    "ros_topic": "/viamrosone/scan"
+  },
+  "depends_on": []
+}
+```
 
 ## Sensor
 

@@ -2,7 +2,7 @@ import os
 import unittest
 
 from datetime import datetime as dt
-from filtering.filter_caching.global_event_table import (
+from filtering.cache.global_event_table import (
     get_active_events,
     get_event_table,
     get_end_time,
