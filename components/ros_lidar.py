@@ -32,10 +32,10 @@ DATA = 'DATA binary\n'
 class RosLidar(Camera, Reconfigurable):
     MODEL: ClassVar[Model] = Model(ModelFamily('viam-soleng', 'noetic'), 'lidar')
 
-    ros_topic: str
-    ros_lidar_props: Camera.Properties
+    ros_topic: Optional[str]
+    ros_lidar_props: Optional[Camera.Properties]
     lock: Lock
-    msg: LaserScan
+    msg: Optional[LaserScan]
 
     @classmethod
     def new(cls, config: ComponentConfig, dependencies: Mapping[ResourceName, ResourceBase]) -> Self:
@@ -54,6 +54,8 @@ class RosLidar(Camera, Reconfigurable):
         super().__init__(name)
         self.lock = Lock()
         self.msg = None
+        self.ros_lidar_props = None
+        self.ros_topic = None
 
     def reconfigure(self, config: ComponentConfig, dependencies: Mapping[ResourceName, ResourceBase]) -> None:
         self.ros_topic = config.attributes.fields['ros_topic'].string_value
@@ -65,6 +67,7 @@ class RosLidar(Camera, Reconfigurable):
             distortion_parameters=DistortionParameters(model='')
         )
         rospy.Subscriber(self.ros_topic, LaserScan, self.subscriber_callback)
+        self.lock = Lock()
 
     def subscriber_callback(self, msg: LaserScan) -> None:
         self.msg = msg
@@ -105,7 +108,7 @@ class RosLidar(Camera, Reconfigurable):
         return h + a.tobytes(), CameraMimeType.PCD
 
     async def get_properties(self, *, timeout: Optional[float] = None, **kwargs) -> Camera.Properties:
-        return self.props
+        return self.ros_lidar_props
 
     async def do_commands(
             self,
