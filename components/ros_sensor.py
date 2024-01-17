@@ -188,7 +188,7 @@ class RosSensor(Sensor, Reconfigurable):
         :param msg:
         :return:
         """
-        with self.lock:
+        with self.lock.acquire():
             self.prev_msg = self.msg
             self.msg = build_msg(msg)
             if len(self.events) > 0:
