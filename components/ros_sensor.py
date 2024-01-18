@@ -188,7 +188,7 @@ class RosSensor(Sensor, Reconfigurable):
         :param msg:
         :return:
         """
-        with self.lock.acquire():
+        with self.lock:
             self.prev_msg = self.msg
             self.msg = build_msg(msg)
             if len(self.events) > 0:
@@ -228,8 +228,9 @@ class RosSensor(Sensor, Reconfigurable):
                 if data is not None:
                     return data
             raise NoCaptureToStoreError()
-        if self.msg is not None:
-            return self.msg
+        with self.lock:
+          if self.msg is not None:
+              return self.msg
         return {'value': 'NOT READY'}
 
 
